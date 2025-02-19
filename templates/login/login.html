@@ -25,7 +25,7 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/manager/css/style.css') }}"
+      href="/Smart-Supermarket-Recommendation-System/static/css/manager/css/style.css"
     />
   </head>
   <body>
@@ -80,39 +80,42 @@
 
     <!-- JavaScript to Handle JSON Login Request -->
     <script>
-      document.getElementById("loginForm").addEventListener("submit", async (e) => {
-          e.preventDefault();
-      
-          const formData = {
-              textfield: document.getElementById("textfield").value.trim(),
-              textfield2: document.getElementById("textfield2").value
-          };
-      
-          try {
-              const response = await fetch("/login", {
-                  method: "POST",
-                  headers: {
-                      "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify(formData)
-              });
-      
-              const result = await response.json();
-              
-              if (!response.ok) {
-                  throw new Error(result.error || "Login failed");
-              }
-      
-              if (result.success) {
-                  window.location.href = result.redirect;
-              } else {
-                  alert(result.error || "Invalid credentials");
-              }
-          } catch (error) {
-              console.error("Error:", error);
-              alert(error.message || "An error occurred during login");
-          }
-      });
-      </script>
+      document.getElementById("loginForm").addEventListener("submit", async function (event) {
+    event.preventDefault(); // Prevent form submission
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    try {
+        const response = await fetch("/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email: email, password: password }),
+        });
+
+        // ✅ Check if response is not empty
+        const text = await response.text();
+        if (!text) {
+            throw new Error("Empty response from server");
+        }
+
+        // ✅ Parse JSON safely
+        const result = JSON.parse(text);
+
+        if (response.ok) {
+            alert(result.message); // Show success message
+            window.location.href = "/dashboard"; // Redirect on success
+        } else {
+            alert(result.error); // Show error message
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("An error occurred. Please try again.");
+    }
+});
+
+    </script>
   </body>
 </html>
