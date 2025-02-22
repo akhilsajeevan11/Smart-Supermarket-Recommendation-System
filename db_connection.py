@@ -1,6 +1,6 @@
 import os
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import Error, IntegrityError
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -14,59 +14,80 @@ class Db:
         self.cursor = None
         try:
             self.connection = mysql.connector.connect(
-                host="localhost",  
-                user="root",       
-                password="root", 
-                database="super_market_recomendation_system",
-                port=3306,
-                auth_plugin='mysql_native_password'
+                host=os.getenv('DB_HOST', 'localhost'),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', 'root'),
+                database=os.getenv('DB_NAME', 'super_market_recomendation_system'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                auth_plugin=os.getenv('DB_AUTH_PLUGIN', 'mysql_native_password')
             )
             self.cursor = self.connection.cursor(dictionary=True)
-        except mysql.connector.Error as err:
+            self.connection.autocommit = False  # Disable auto-commit
+        except Error as err:
             print(f"Database connection failed: {err}")
-            print(f"Used credentials: {os.getenv('DB_USER')}@{os.getenv('DB_HOST')}")  # Debug
+            raise
+
+    def commit(self):
+        """Commit the current transaction"""
+        try:
+            self.connection.commit()
+        except Error as err:
+            self.connection.rollback()
+            raise
+
+    def rollback(self):
+        """Roll back the current transaction"""
+        try:
+            self.connection.rollback()
+        except Error as err:
+            print(f"Rollback failed: {err}")
             raise
 
     def execute(self, query, params=None):
-        """For INSERT/UPDATE/DELETE operations"""
-        self.cursor.execute(query, params or ())
-        self.connection.commit()
-        return self.cursor.rowcount
+        """For INSERT/UPDATE/DELETE operations without auto-commit"""
+        try:
+            self.cursor.execute(query, params or ())
+            return self.cursor.rowcount
+        except Error as err:
+            self.rollback()
+            raise
 
     def select(self, query, params=None):
         """For SELECT operations returning multiple rows"""
-        self.cursor.execute(query, params or ())
-        return self.cursor.fetchall()
+        try:
+            self.cursor.execute(query, params or ())
+            return self.cursor.fetchall()
+        except Error as err:
+            raise
 
     def selectOne(self, query, params=None):
         """For SELECT operations returning single row"""
-        self.cursor.execute(query, params or ())
-        return self.cursor.fetchone()
+        try:
+            self.cursor.execute(query, params or ())
+            return self.cursor.fetchone()
+        except Error as err:
+            raise
 
     def insert(self, query, values):
-        """For INSERT operations returning lastrowid"""
+        """For INSERT operations returning lastrowid without auto-commit"""
         try:
             self.cursor.execute(query, values)
-            self.connection.commit()
             return self.cursor.lastrowid
-        except mysql.connector.Error as err:
-            print(f"Insert error: {err}")
-            self.connection.rollback()
+        except Error as err:
+            self.rollback()
             raise
-        finally:
-            if self.cursor:
-                self.cursor.close()
-            self.cursor = self.connection.cursor()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        if self.cursor:
+            self.cursor.close()
+        if self.connection and self.connection.is_connected():
+            self.connection.close()
 
     def __del__(self):
-        try:
-            if hasattr(self, 'cursor') and self.cursor:
-                self.cursor.close()
-        except AttributeError:
-            pass
-        
-        try:
-            if hasattr(self, 'connection') and self.connection.is_connected():
-                self.connection.close()
-        except AttributeError:
-            pass
+        self.close()

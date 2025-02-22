@@ -5,6 +5,7 @@ import hashlib  # For password hashing
 import bcrypt
 import re
 from mysql.connector import IntegrityError
+import traceback
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -18,65 +19,109 @@ def main():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == "POST":
+    if request.method == 'POST':
         data = request.get_json()
-        username = data.get('textfield', '').strip()
-        password = data.get('textfield2', '')
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
         
         try:
-            if not username or not password:
-                return jsonify({"success": False, "error": "Username/Email and password required"}), 400
+            if not email or not password:
+                return jsonify({"success": False, "error": "Email and password required"}), 400
 
-            # Check if input is email (customer login)
-            if '@' in username:
-                db = Db()
-                customer = db.selectOne(
-                    "SELECT customer_id, email, password FROM customer WHERE email = %s", 
-                    (username,)
+            # Determine role and redirect URL
+            role = 'Customer'
+            redirect_url = url_for('home')
+            if '@admin' in email:
+                role = 'Admin'
+                redirect_url = url_for('admin')
+            elif '@staff' in email:
+                role = 'Staff'
+                redirect_url = url_for('staff')
+            elif '@manager' in email:
+                role = 'Manager'
+                redirect_url = url_for('manager')
+
+            db = Db()
+            
+            try:
+                # Check Users table
+                user = db.selectOne(
+                    "SELECT user_id, password, role FROM Users WHERE email = %s",
+                    (email,)
                 )
                 
-                if customer:
-                    hashed_input = hashlib.sha256(password.encode()).hexdigest()
-                    if hashed_input == customer.get('password'):
-                        session['user_id'] = customer.get('customer_id')
-                        session['user_type'] = 'customer'
-                        return jsonify({
-                            "success": True,
-                            "redirect": url_for('home')
-                        })
+                # Create new system user if not exists
+                if not user and role != 'Customer':
+                    username = email.split('@')[0]
+                    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+                        return jsonify({"success": False, "error": "Invalid username format"}), 400
 
-            # Staff login
-            db = Db()
-            user = db.selectOne(
-                "SELECT login_id, password, user_type FROM login WHERE username = %s", 
-                (username,)
-            )
-            
-            if user and bcrypt.checkpw(password.encode(), user.get('password', '').encode()):
-                session['user_id'] = user.get('login_id')
-                session['user_type'] = user['user_type']
-                return jsonify({
-                    "success": True,
-                    "redirect": url_for('admin_dashboard' if user['user_type'] == 'manager' else 'staff_dashboard')
-                })
+                    try:
+                        # First check Admin table credentials
+                        admin_user = db.selectOne(
+                            "SELECT email, password FROM Admin WHERE email = %s AND password = %s",
+                            (email, password)
+                        )
+                        if not admin_user:
+                            return jsonify({"success": False, "error": "Invalid admin credentials"}), 401
+                            
+                        # Create user only if admin credentials are valid
+                        user_id = db.insert(
+                            "INSERT INTO Users (username, email, password, role) VALUES (%s, %s, %s, %s)",
+                            (username, email, password, role)
+                        )
+                        db.commit()
+                        user = db.selectOne(
+                            "SELECT user_id, password, role FROM Users WHERE email = %s",
+                            (email,)
+                        )
 
-            return jsonify({
-                "success": False,
-                "error": "Invalid credentials"
-            }), 401
+                    except Exception as e:
+                        db.rollback()
+                        raise
+
+                # Validate credentials for all users
+                if user and user['password'] == password:
+                    session.update({
+                        'user_id': user['user_id'],
+                        'role': user['role']
+                    })
+                    
+                    # For customers, ensure Customer record exists
+                    if user['role'] == 'Customer':
+                        customer = db.selectOne(
+                            "SELECT customer_id FROM Customer WHERE user_id = %s",
+                            (user['user_id'],)
+                        )
+                        if not customer:
+                            db.insert("INSERT INTO Customer (user_id) VALUES (%s)", (user['user_id'],))
+                            db.commit()
+                    
+                    return jsonify({
+                        "success": True,
+                        "redirect": redirect_url
+                    })
+                
+                return jsonify({"success": False, "error": "Invalid credentials"}), 401
+
+            except IntegrityError as e:
+                db.rollback()
+                return jsonify({"success": False, "error": "User already exists"}), 409
+            except Exception as db_error:
+                db.rollback()
+                print(f"Database error: {str(db_error)}")
+                return jsonify({"success": False, "error": "Database operation failed"}), 500
 
         except Exception as e:
-            return jsonify({
-                "success": False,
-                "error": f"Login error: {str(e)}"
-            }), 500
-        
-    return render_template("login/login.html")
+            print(f"General error: {traceback.format_exc()}")
+            return jsonify({"success": False, "error": "Internal server error"}), 500
+
+    return render_template('login/login.html')
 
 @app.route('/home')
 def home():
-    # if 'user_id' not in session:
-    #     return redirect('/')
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     return render_template("index.html")
 
 def validate_email(email):
@@ -87,60 +132,48 @@ def validate_email(email):
 def signup():
     if request.method == 'POST':
         data = request.get_json()
-        
-        # Validate required fields first
-        required_fields = ['customer_name', 'email', 'phone_number', 'password']
-        if not all(field in data for field in required_fields):
-            return jsonify({'success': False, 'error': 'All fields are required'}), 400
-
+        db = Db()
         try:
+            # Validate fields
             email = data['email'].lower().strip()
-            phone_number = data['phone_number']
+            phone_number = str(data['phone_number'])
             password = data['password']
+            customer_name = data['customer_name'].strip()
 
-            # Email validation
+            # Validate email format
             if not validate_email(email):
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid email format. Please use example@domain.com'
-                }), 400
+                return jsonify({'error': 'Invalid email format'}), 400
 
-            # Phone validation
-            if not (1000000000 <= int(phone_number) <= 9999999999):
-                return jsonify({'success': False, 'error': 'Invalid phone number'}), 400
+            # Validate phone number
+            if not re.match(r'^\d{10}$', phone_number):
+                return jsonify({'error': 'Invalid phone number'}), 400
 
-            # Check if email exists
-            db = Db()
-            if db.selectOne("SELECT email FROM customer WHERE email = %s", (email,)):
-                return jsonify({'success': False, 'error': 'Email already registered'}), 409
+            # Check if email exists in Users table
+            if db.selectOne("SELECT email FROM Users WHERE email = %s", (email,)):
+                return jsonify({'error': 'Email already registered'}), 409
 
-            # Hash password
-            hashed_password = hashlib.sha256(password.encode()).hexdigest()
-
-            # Insert new user
-            query = """
-                INSERT INTO customer 
-                (customer_name, email, phone_number, password) 
-                VALUES (%s, %s, %s, %s)
-            """
-            db.insert(query, (
-                data['customer_name'].strip(),
-                email,
-                int(phone_number),
-                hashed_password
-            ))
-
-            return jsonify({
-                'success': True,
-                'redirect': url_for('/')  # Ensure you have a route named 'home'
-            }), 201
+            # Insert into Users table
+            user_id = db.insert(
+                """INSERT INTO Users 
+                (username, email, password, role) 
+                VALUES (%s, %s, %s, 'Customer')""",
+                (customer_name, email, password)
+            )
+            
+            # Insert into Customer table (only user_id as per schema)
+            db.insert(
+                "INSERT INTO Customer (user_id) VALUES (%s)",
+                (user_id,)
+            )
+            
+            db.commit()
+            return jsonify({'success': True, 'redirect': url_for('login')}), 201
 
         except IntegrityError as e:
-            return jsonify({'success': False, 'error': 'Email or phone already exists'}), 409
-        except ValueError:
-            return jsonify({'success': False, 'error': 'Invalid phone number format'}), 400
+            return jsonify({'error': 'Registration conflict'}), 409
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            print(f"Signup error: {str(e)}")
+            return jsonify({'error': 'Registration failed'}), 500
 
     return render_template('login/signup.html')
 
@@ -148,7 +181,23 @@ def signup():
 
 
 
+@app.route('/admin')
+def admin():
 
+    return render_template("index.html")
+
+
+@app.route('/staff')
+def staff():
+
+    return render_template("index.html")
+
+
+
+@app.route('/manager')
+def manager():
+
+    return render_template("index.html")
 
 
 if __name__ == '__main__':
