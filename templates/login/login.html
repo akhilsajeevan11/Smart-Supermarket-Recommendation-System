@@ -25,7 +25,7 @@
     />
     <link
       rel="stylesheet"
-      href="/Smart-Supermarket-Recommendation-System/static/css/manager/css/style.css"
+      href="{{ url_for('static', filename='css/manager/css/style.css') }}"
     />
   </head>
   <body>
@@ -40,23 +40,23 @@
             <input
               type="text"
               class="form-control"
-              name="textfield"
-              id="textfield"
+              name="email"
+              id="email"
               placeholder="name@example.com or username"
               required
             />
-            <label for="textfield">Username/Email</label>
+            <label for="email">Username/Email</label>
           </div>
           <div class="form-floating mb-3">
             <input
               type="password"
               class="form-control"
-              name="textfield2"
-              id="textfield2"
+              name="password"
+              id="password"
               placeholder="Password"
               required
             />
-            <label for="textfield2">Password</label>
+            <label for="password">Password</label>
           </div>
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div class="form-check">
@@ -81,7 +81,7 @@
     <!-- JavaScript to Handle JSON Login Request -->
     <script>
       document.getElementById("loginForm").addEventListener("submit", async function (event) {
-    event.preventDefault(); // Prevent form submission
+    event.preventDefault();
 
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
@@ -95,24 +95,21 @@
             body: JSON.stringify({ email: email, password: password }),
         });
 
-        // ✅ Check if response is not empty
-        const text = await response.text();
-        if (!text) {
-            throw new Error("Empty response from server");
+        // Handle non-JSON responses
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        // ✅ Parse JSON safely
-        const result = JSON.parse(text);
+        const result = await response.json();
 
-        if (response.ok) {
-            alert(result.message); // Show success message
-            window.location.href = "/dashboard"; // Redirect on success
+        if (result.success) {
+            window.location.href = "/home";
         } else {
-            alert(result.error); // Show error message
+            alert(result.error || "Login failed");
         }
     } catch (error) {
         console.error("Error:", error);
-        alert("An error occurred. Please try again.");
+        alert(error.message || "An error occurred. Please try again.");
     }
 });
 
