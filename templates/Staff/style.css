@@ -1,0 +1,56 @@
+body {
+    background-color: #f8f9fa;
+    transition: background-color 0.3s ease;
+}
+
+.card {
+    border-radius: 10px;
+}
+
+.shadow {
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-lg {
+    padding: 10px 20px;
+    font-size: 18px;
+}
+
+.preview-img {
+    width: 120px;
+    border-radius: 8px;
+}
+
+.table {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+}
+
+/* Dark Mode */
+.dark-mode {
+    background-color: #121212;
+    color: #fff;
+}
+
+.dark-mode .card {
+    background-color: #1e1e1e;
+    color: #fff;
+}
+
+.dark-mode .table {
+    background-color: #222;
+    color: #fff;
+}
+
+.dark-mode .table-dark th {
+    background-color: #333;
+}
+
+.dark-mode .btn-dark {
+    background-color: #444;
+}
