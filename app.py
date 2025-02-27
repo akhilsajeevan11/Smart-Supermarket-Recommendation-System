@@ -180,10 +180,6 @@ def signup():
 
 
 
-def render_admin_template(template):
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render_template(f"admin/pages/{template}")
-    return render_template('admin/index.html')
 
 @app.route('/admin')
 def admin_home():
