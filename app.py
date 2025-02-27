@@ -122,7 +122,7 @@ def login():
 def home():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    return render_template("index.html")
+    return render_template("/home/index.html")
 
 def validate_email(email):
     # More comprehensive email regex
@@ -180,24 +180,51 @@ def signup():
 
 
 
+def render_admin_template(template):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render_template(f"admin/pages/{template}")
+    return render_template('admin/index.html')
 
 @app.route('/admin')
-def admin():
+def admin_home():
+    return render_template('admin/index.html')
 
-    return render_template("index.html")
+@app.route('/admin/users')
+def admin_users():
+    return render_template('admin/pages/users.html')
 
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    return render_template('admin/pages/dashboard.html')
 
-@app.route('/staff')
-def staff():
+@app.route('/admin/notifications')
+def admin_notification():
+    return render_template('admin/pages/notifications.html')
 
-    return render_template("index.html")
+@app.route('/admin/sales')
+def admin_sales():
+    return render_template('admin/pages/sales.html')
+
+@app.route('/admin/security')
+def admin_security():
+    return render_template('admin/pages/security.html')
 
 
 
 @app.route('/manager')
 def manager():
 
-    return render_template("index.html")
+    return render_template("manager/index.html")
+
+
+@app.route('/staff')
+def staff():
+
+    return render_template("staff/index.html")
+
+
+
+
 
 
 if __name__ == '__main__':
