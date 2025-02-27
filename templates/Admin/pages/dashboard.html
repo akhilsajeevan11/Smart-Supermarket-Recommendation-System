@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+</head>
+<body>
+    <h2>Dashboard</h2>
+    <canvas id="salesChart" width="400" height="200"></canvas>
+
+    <script>
+        function loadChart() {
+            const ctx = document.getElementById("salesChart").getContext("2d");
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                    datasets: [{
+                        label: "Sales (in $1000s)",
+                        data: [12, 19, 3, 5, 2, 3],
+                        backgroundColor: "rgba(54, 162, 235, 0.5)"
+                    }]
+                }
+            });
+        }
+        loadChart(); // Run the function when loaded
+    </script>
+</body>
+</html>

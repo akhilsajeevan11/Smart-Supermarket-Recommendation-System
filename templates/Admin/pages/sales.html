@@ -1,0 +1,21 @@
+<h2>Sales Reports</h2>
+<div class="card">
+    <h4>Monthly Sales Overview</h4>
+    <canvas id="salesReportChart"></canvas>
+</div>
+<script>
+    const salesCtx = document.getElementById('salesReportChart').getContext('2d');
+    new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar'],
+            datasets: [{
+                label: 'Total Sales ($)',
+                data: [12000, 15500, 18200],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                fill: true
+            }]
+        }
+    });
+</script>
