@@ -120,8 +120,8 @@ def login():
 
 @app.route('/home')
 def home():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+    # if 'user_id' not in session:
+    #     return redirect(url_for('login'))
     return render_template("/home/index.html")
 
 def validate_email(email):
