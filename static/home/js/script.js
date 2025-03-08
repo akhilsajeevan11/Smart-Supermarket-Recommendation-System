@@ -235,3 +235,66 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // Add to cart End
+
+
+// Function to get wishlist from local storage
+function getWishlist() {
+  return JSON.parse(localStorage.getItem('wishlist')) || [];
+}
+
+// Function to add an item to the wishlist dynamically
+function addToWishlist(event, btn) {
+  event.preventDefault();
+  
+  let product = btn.closest('.product-item'); // Find the parent product container
+  let title = product.querySelector('h3').innerText;
+  let qty = product.querySelector('.qty').innerText;
+  let price = product.querySelector('.price').innerText.replace('₹', '').trim();
+  let image = product.querySelector('img').src;
+
+  let wishlist = getWishlist();
+
+  // Check if item already exists
+  if (!wishlist.some(item => item.title === title)) {
+      wishlist.push({ title, qty, price, image });
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+      alert('Item added to wishlist!');
+  } else {
+      alert('Item already in wishlist!');
+  }
+}
+
+// Function to remove an item from the wishlist
+function removeFromWishlist(title) {
+  let wishlist = getWishlist();
+  wishlist = wishlist.filter(item => item.title !== title);
+  localStorage.setItem('wishlist', JSON.stringify(wishlist));
+  displayWishlist(); // Refresh the wishlist display
+}
+
+// Function to display wishlist on wishlist page
+function displayWishlist() {
+  let wishlist = getWishlist();
+  let wishlistContainer = document.getElementById('wishlist-container');
+  
+  if (!wishlistContainer) return;
+
+  wishlistContainer.innerHTML = wishlist.length ? '' : '<p>Your wishlist is empty.</p>';
+  
+  wishlist.forEach(item => {
+      wishlistContainer.innerHTML += `
+          <div class="card">
+              <img src="${item.image}" class="card-img-top" alt="${item.title}">
+              <div class="card-body">
+                  <h5 class="card-title">${item.title}</h5>
+                  <p class="card-text">${item.qty}</p>
+                  <p class="card-text">Price: ₹${item.price}</p>
+                  <button class="btn btn-danger" onclick="removeFromWishlist('${item.title}')">Remove</button>
+              </div>
+          </div>
+      `;
+  });
+}
+
+// Load wishlist when page loads
+document.addEventListener('DOMContentLoaded', displayWishlist);

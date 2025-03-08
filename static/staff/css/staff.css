@@ -1,56 +1,91 @@
+/* Global Styles */
 body {
-    background-color: #f8f9fa;
-    transition: background-color 0.3s ease;
-}
-
-.card {
-    border-radius: 10px;
-}
-
-.shadow {
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.btn-lg {
-    padding: 10px 20px;
-    font-size: 18px;
-}
-
-.preview-img {
-    width: 120px;
+    background-color: #2c3e50;
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Full Page Layout */
+  .container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0;
+  }
+  
+  /* Custom Card Styles */
+  .card-custom {
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background: white;
+    padding: 20px;
+    margin-bottom: 100px !important;
+  }
+  
+  /* Table Styles */
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .table th {
+    background: #ffc43f;
+    color: black;
+    padding: 12px;
+  }
+  
+  .table td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+  
+  }
+  
+  .table tbody tr:hover {
+    background: #fdf2d4;
+  }
+  
+  /* Buttons */
+  .btn-custom {
+    background: #ffc43f;
+    border: none;
+    font-weight: 600;
+    transition: 0.3s;
+  }
+  
+  .btn-custom:hover {
+    background: #e0a800;
+  }
+  
+  /* Image Preview */
+  .preview-img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
     border-radius: 8px;
-}
-
-.table {
-    background-color: white;
+  }
+  
+  /* Notifications */
+  .notification-dialog {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    width: 400px !important;
+    background: white;
     border-radius: 8px;
-    overflow: hidden;
-}
-
-.table th, .table td {
-    vertical-align: middle;
-}
-
-/* Dark Mode */
-.dark-mode {
-    background-color: #121212;
-    color: #fff;
-}
-
-.dark-mode .card {
-    background-color: #1e1e1e;
-    color: #fff;
-}
-
-.dark-mode .table {
-    background-color: #222;
-    color: #fff;
-}
-
-.dark-mode .table-dark th {
-    background-color: #333;
-}
-
-.dark-mode .btn-dark {
-    background-color: #444;
-}
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: none;
+    z-index: 1000;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 991px) {
+    .table-responsive {
+      overflow-x: auto;
+    }
+  }
+  
