@@ -253,12 +253,25 @@ body {
 }
 body {
   letter-spacing: 0.03em;
+  background-color:#FFFFF0;
 }
 h1,h2,h3,h4,h5,h6 {
   font-family: var(--heading-font);
   color: var(--dark-color);
   font-weight: 700;
 }
+.main-logo img {
+  width: 550px;  /* Adjust width as needed */
+  height: auto;  /* Maintain aspect ratio */
+  max-width: 100%; /* Ensures responsiveness */
+  
+  /* Prevents image from becoming blurry */
+  image-rendering: -webkit-optimize-contrast; 
+  image-rendering: crisp-edges; 
+  image-rendering: high-quality; 
+}
+
+
 .display-1,
 .display-2,
 .display-3,

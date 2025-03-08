@@ -4,7 +4,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 let products = [];
-let tasks = [];
 
 function addOrUpdateProduct() {
     let name = document.getElementById("product-name").value.trim();
@@ -13,14 +12,12 @@ function addOrUpdateProduct() {
     let promotion = document.getElementById("promotion").value.trim();
     let price = parseFloat(document.getElementById("price").value);
     let imageInput = document.getElementById("product-image");
-    let imagePreview = document.getElementById("image-preview");
 
     if (name === "" || isNaN(stock) || stock <= 0 || isNaN(price) || price <= 0) {
         alert("Please enter valid product details.");
         return;
     }
 
-    // Convert image to Base64 to persist it
     if (imageInput.files.length > 0) {
         let file = imageInput.files[0];
         let reader = new FileReader();
@@ -38,10 +35,8 @@ function saveProduct(name, category, stock, promotion, price, image) {
     let existingProductIndex = products.findIndex(product => product.name === name);
 
     if (existingProductIndex !== -1) {
-        // Update existing product
         products[existingProductIndex] = { name, category, stock, promotion, price, image };
     } else {
-        // Add new product
         products.push({ name, category, stock, promotion, price, image });
     }
 
@@ -69,7 +64,7 @@ function updateProductList() {
         return;
     }
 
-    let rows = products.map((product, index) => `
+    tableBody.innerHTML = products.map((product, index) => `
         <tr>
             <td><img src="${product.image || '#'}" alt="Product Image" width="50" class="img-thumbnail"></td>
             <td>${product.name}</td>
@@ -81,9 +76,7 @@ function updateProductList() {
                 <button class='btn btn-danger btn-sm' onclick='deleteProduct(${index})'>Delete</button>
             </td>
         </tr>
-    `);
-
-    tableBody.innerHTML = rows.join(""); // More efficient DOM manipulation
+    `).join("");
 }
 
 function deleteProduct(index) {
@@ -99,23 +92,8 @@ function checkLowStock() {
     if (lowStockProducts.length > 0) {
         alertBox.classList.remove("d-none");
         alertBox.innerText = "Low stock on: " + lowStockProducts.map(p => `${p.name} (${p.stock})`).join(", ");
-        tasks = lowStockProducts.map(p => `Restock ${p.name} (${p.stock} left)`);
     } else {
         alertBox.classList.add("d-none");
-        tasks = [];
-    }
-
-    updateTaskList();
-}
-
-function updateTaskList() {
-    let taskList = document.getElementById("task-list");
-    taskList.innerHTML = "";
-
-    if (tasks.length === 0) {
-        taskList.innerHTML = '<li class="list-group-item">No pending tasks</li>';
-    } else {
-        taskList.innerHTML = tasks.map(task => `<li class="list-group-item">${task}</li>`).join("");
     }
 }
 
@@ -131,4 +109,9 @@ function previewImage(event) {
             preview.classList.remove("d-none");
         };
     }
+}
+
+function toggleNotifications() {
+    let dialog = document.getElementById('notification-dialog');
+    dialog.style.display = dialog.style.display === 'none' || dialog.style.display === '' ? 'block' : 'none';
 }
