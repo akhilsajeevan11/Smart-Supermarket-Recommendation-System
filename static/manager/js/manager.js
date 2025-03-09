@@ -11,7 +11,8 @@ function loadSection(section) {
         content.innerHTML = `
             <h2 class="text-center">Stock Tracking</h2>
             <div id="stock-alert" class="alert alert-info">Stock levels are up to date.</div>
-            <button class='btn btn-danger' onclick='notifyStaff()'>Notify Staff</button>`;
+            <button class='btn btn-danger' onclick='notifyStaff()'>Notify Staff</button>
+            <div id="notification-response" class="mt-3"></div>`;
     } else {
         location.reload();
     }
