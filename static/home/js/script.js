@@ -147,7 +147,7 @@
 
 //Add to cart Start
 document.addEventListener("DOMContentLoaded", function () {
-  updateCartUI(); // Ensure cart is updated when the page loads
+  updateCartUI(); 
   document.querySelectorAll(".add-to-cart-btn").forEach((button) => {
     button.addEventListener("click", function (event) {
       event.preventDefault();
@@ -237,64 +237,92 @@ document.addEventListener("DOMContentLoaded", function () {
 // Add to cart End
 
 
-// Function to get wishlist from local storage
+/// Function to get wishlist from local storage
+// Get wishlist from localStorage
 function getWishlist() {
-  return JSON.parse(localStorage.getItem('wishlist')) || [];
+  return JSON.parse(localStorage.getItem("wishlist")) || [];
 }
 
-// Function to add an item to the wishlist dynamically
+// Function to add an item to the wishlist
 function addToWishlist(event, btn) {
   event.preventDefault();
-  
-  let product = btn.closest('.product-item'); // Find the parent product container
-  let title = product.querySelector('h3').innerText;
-  let qty = product.querySelector('.qty').innerText;
-  let price = product.querySelector('.price').innerText.replace('₹', '').trim();
-  let image = product.querySelector('img').src;
+
+  let product = btn.closest(".product-item");
+  let title = product.querySelector("h3").innerText;
+  let qty = product.querySelector(".qty").innerText;
+  let price = product.querySelector(".price").innerText.replace("₹", "").trim();
+  let image = product.querySelector("img").src;
 
   let wishlist = getWishlist();
 
-  // Check if item already exists
-  if (!wishlist.some(item => item.title === title)) {
-      wishlist.push({ title, qty, price, image });
-      localStorage.setItem('wishlist', JSON.stringify(wishlist));
-      alert('Item added to wishlist!');
+  if (!wishlist.some((item) => item.title === title)) {
+    wishlist.push({ title, qty, price, image });
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+    alert("Item added to wishlist!");
   } else {
-      alert('Item already in wishlist!');
+    alert("Item already in wishlist!");
   }
+
+  displayWishlist(false);
 }
 
 // Function to remove an item from the wishlist
 function removeFromWishlist(title) {
   let wishlist = getWishlist();
-  wishlist = wishlist.filter(item => item.title !== title);
-  localStorage.setItem('wishlist', JSON.stringify(wishlist));
-  displayWishlist(); // Refresh the wishlist display
+  wishlist = wishlist.filter((item) => item.title !== title);
+  localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  displayWishlist(false); 
 }
 
-// Function to display wishlist on wishlist page
-function displayWishlist() {
+// Function to display wishlist in popup
+function displayWishlist(triggeredByUser = false) {
   let wishlist = getWishlist();
-  let wishlistContainer = document.getElementById('wishlist-container');
-  
-  if (!wishlistContainer) return;
+  let wishlistContainer = document.getElementById("wishlist-popup-content");
 
-  wishlistContainer.innerHTML = wishlist.length ? '' : '<p>Your wishlist is empty.</p>';
-  
-  wishlist.forEach(item => {
-      wishlistContainer.innerHTML += `
-          <div class="card">
-              <img src="${item.image}" class="card-img-top" alt="${item.title}">
-              <div class="card-body">
-                  <h5 class="card-title">${item.title}</h5>
-                  <p class="card-text">${item.qty}</p>
-                  <p class="card-text">Price: ₹${item.price}</p>
-                  <button class="btn btn-danger" onclick="removeFromWishlist('${item.title}')">Remove</button>
-              </div>
-          </div>
-      `;
+  // Clear previous content
+  wishlistContainer.innerHTML = wishlist.length ? "" : "<p>Your wishlist is empty.</p>";
+
+  wishlist.forEach((item) => {
+    wishlistContainer.innerHTML += `
+      <tr>
+        <td><img src="${item.image}" alt="${item.title}" class="wishlist-img"></td>
+        <td>${item.title}</td>
+        <td>₹${item.price}</td>
+        <td>${item.qty}</td>
+        <td>
+          <button class="remove-btn" onclick="removeFromWishlist('${item.title}')">Remove</button>
+        </td>
+      </tr>
+    `;
   });
+
+  // Show popup only if triggered by the user
+  if (triggeredByUser) {
+    showWishlistPopup();
+  }
 }
 
-// Load wishlist when page loads
-document.addEventListener('DOMContentLoaded', displayWishlist);
+function showWishlistPopup() {
+  const wishlistPopup = document.getElementById("wishlist-popup");
+  wishlistPopup.style.display = "flex";
+  wishlistPopup.style.justifyContent = "center";
+  wishlistPopup.style.alignItems = "center";
+}
+
+function closeWishlistPopup() {
+  document.getElementById("wishlist-popup").style.display = "none";
+}
+
+document.getElementById("wishlist-btn").addEventListener("click", function () {
+  displayWishlist(true); 
+});
+
+document.querySelectorAll(".add-to-wishlist-btn").forEach((button) => {
+  button.addEventListener("click", function (event) {
+    addToWishlist(event, this);
+  });
+});
+
+window.addEventListener("load", function () {
+  closeWishlistPopup(); 
+});

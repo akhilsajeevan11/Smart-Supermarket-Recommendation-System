@@ -218,6 +218,9 @@ def staff():
 
     return render_template("staff/index.html")
 
+@app.route('/checkout')
+def checkout():
+    return render_template('home/pages/checkout.html')
 
 
 
