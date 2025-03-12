@@ -11,6 +11,14 @@ document.addEventListener("DOMContentLoaded", function() {
             loadPage(pageUrl);
         });
     });
+
+    // Handle user form submission
+    document.getElementById("content").addEventListener("submit", function(event) {
+        if (event.target.id === "userForm") {
+            event.preventDefault();
+            createUser();
+        }
+    });
 });
 
 function loadPage(url) {
@@ -37,4 +45,37 @@ function executeScripts(container) {
         document.body.appendChild(newScript);
         oldScript.remove();
     });
+}
+
+async function createUser() {
+    const userData = {
+        username: document.getElementById("username").value,
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value,
+        role: document.getElementById("role").value
+    };
+
+    try {
+        const response = await fetch('/admin/create_user', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData)
+        });
+
+        const result = await response.json();
+        const messageDiv = document.getElementById("message");
+        
+        if (response.ok) {
+            messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+            document.getElementById("userForm").reset();
+        } else {
+            messageDiv.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById("message").innerHTML = 
+            `<div class="alert alert-danger">An error occurred. Please try again.</div>`;
+    }
 }

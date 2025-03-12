@@ -1,3 +1,6 @@
+// Initialize SocketIO
+const socket = io();
+
 document.addEventListener("DOMContentLoaded", function () {
     updateProductList();
     checkLowStock();
@@ -34,16 +37,54 @@ function addOrUpdateProduct() {
 function saveProduct(name, category, stock, promotion, price, image) {
     let existingProductIndex = products.findIndex(product => product.name === name);
 
+    const productData = {
+        name,
+        category,
+        stock,
+        promotion,
+        price,
+        image,
+        staff_id: getStaffId(),
+        product_id: existingProductIndex !== -1 ? products[existingProductIndex].product_id : Date.now().toString()
+    };
+
     if (existingProductIndex !== -1) {
-        products[existingProductIndex] = { name, category, stock, promotion, price, image };
+        products[existingProductIndex] = productData;
     } else {
-        products.push({ name, category, stock, promotion, price, image });
+        products.push(productData);
     }
+
+    // Emit the new product to the server
+    socket.emit('add_product', productData);
 
     resetForm();
     updateProductList();
     checkLowStock();
 }
+
+function getStaffId() {
+    // Retrieve staff_id from the global window object
+    const staffId = window.staffId;
+    if (!staffId) {
+        console.error("Staff ID not found. Please ensure the staff_id is set in the session.");
+    }
+    return staffId;
+}
+
+// Listen for new products from the server
+socket.on('new_product', function(product) {
+    // Check if product already exists
+    const existingProductIndex = products.findIndex(p => p.name === product.name);
+    
+    if (existingProductIndex !== -1) {
+        products[existingProductIndex] = product;
+    } else {
+        products.push(product);
+    }
+    
+    updateProductList();
+    checkLowStock();
+});
 
 function resetForm() {
     document.getElementById("product-name").value = "";
@@ -64,8 +105,8 @@ function updateProductList() {
         return;
     }
 
-    tableBody.innerHTML = products.map((product, index) => `
-        <tr>
+    tableBody.innerHTML = products.map((product) => 
+        `<tr>
             <td><img src="${product.image || '#'}" alt="Product Image" width="50" class="img-thumbnail"></td>
             <td>${product.name}</td>
             <td>${product.category}</td>
@@ -73,17 +114,43 @@ function updateProductList() {
             <td>${product.promotion || "-"}</td>
             <td>$${product.price.toFixed(2)}</td>
             <td>
-                <button class='btn btn-danger btn-sm' onclick='deleteProduct(${index})'>Delete</button>
+                <button class='btn btn-danger btn-sm' onclick='deleteProduct("${product.product_id}")'>Delete</button>
             </td>
-        </tr>
-    `).join("");
+        </tr>`
+    ).join("");
 }
 
-function deleteProduct(index) {
-    products.splice(index, 1);
+function deleteProduct(product_id) {
+    const staff_id = getStaffId();
+    
+    console.log("Attempting to delete product:", product_id); // Debugging
+    console.log("Staff ID:", staff_id); // Debugging
+    
+    if (!product_id || !staff_id) {
+        console.error("Product ID and Staff ID are required");
+        return;
+    }
+
+    // Ensure product_id is passed as a string (if needed)
+    socket.emit('delete_product', {
+        product_id: String(product_id), // Convert to string if necessary
+        staff_id: staff_id
+    });
+}
+
+// Listen for product deletions
+socket.on('product_deleted', function(data) {
+    console.log("Product deleted:", data.product_id); // Debugging
+    console.log("Type of deleted product_id:", typeof data.product_id); // Debugging
+    console.log("Current products before deletion:", products); // Debugging
+
+    // Ensure product_id types match (convert to string if necessary)
+    products = products.filter(product => String(product.product_id) !== String(data.product_id));
+
+    console.log("Current products after deletion:", products); // Debugging
     updateProductList();
     checkLowStock();
-}
+});
 
 function checkLowStock() {
     let lowStockProducts = products.filter(product => product.stock < 5);

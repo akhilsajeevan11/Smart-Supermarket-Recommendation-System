@@ -1,14 +1,16 @@
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for
 from db_connection import Db  # Import the Db class
 import os
-import hashlib  # For password hashing
 import bcrypt
 import re
 from mysql.connector import IntegrityError
 import traceback
+from flask_socketio import SocketIO
+import json
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+socketio = SocketIO(app)
 
 
 
@@ -23,6 +25,7 @@ def login():
         data = request.get_json()
         email = data.get('email', '').strip().lower()
         password = data.get('password', '')
+        print("Email received:", email)
         
         try:
             if not email or not password:
@@ -33,7 +36,7 @@ def login():
             redirect_url = url_for('home')
             if '@admin' in email:
                 role = 'Admin'
-                redirect_url = url_for('admin')
+                redirect_url = url_for('admin_home')  # Redirect to admin home
             elif '@staff' in email:
                 role = 'Staff'
                 redirect_url = url_for('staff')
@@ -44,41 +47,41 @@ def login():
             db = Db()
             
             try:
-                # Check Users table
+                # Handle admin login separately (only from Admin table)
+                if role == 'Admin':
+                    admin = db.selectOne(
+                        "SELECT admin_id FROM Admin WHERE email = %s AND password = %s",
+                        (email, password)
+                    )
+                    if not admin:
+                        return jsonify({"success": False, "error": "Invalid admin credentials"}), 401
+                    
+                    # Set admin session
+                    session.update({
+                        'admin_id': admin['admin_id'],
+                        'role': 'Admin'
+                    })
+                    print("Admin login successful. Redirecting to:", redirect_url)  # Debugging
+                    return jsonify({
+                        "success": True,
+                        "redirect": redirect_url
+                    })
+
+                # For other roles (Staff, Manager, Customer), check Users table
                 user = db.selectOne(
                     "SELECT user_id, password, role FROM Users WHERE email = %s",
                     (email,)
                 )
                 
-                # Create new system user if not exists
-                if not user and role != 'Customer':
-                    username = email.split('@')[0]
-                    if not re.match(r'^[a-zA-Z0-9_]+$', username):
-                        return jsonify({"success": False, "error": "Invalid username format"}), 400
-
-                    try:
-                        # First check Admin table credentials
-                        admin_user = db.selectOne(
-                            "SELECT email, password FROM Admin WHERE email = %s AND password = %s",
-                            (email, password)
-                        )
-                        if not admin_user:
-                            return jsonify({"success": False, "error": "Invalid admin credentials"}), 401
-                            
-                        # Create user only if admin credentials are valid
-                        user_id = db.insert(
-                            "INSERT INTO Users (username, email, password, role) VALUES (%s, %s, %s, %s)",
-                            (username, email, password, role)
-                        )
-                        db.commit()
-                        user = db.selectOne(
-                            "SELECT user_id, password, role FROM Users WHERE email = %s",
-                            (email,)
-                        )
-
-                    except Exception as e:
-                        db.rollback()
-                        raise
+                # If user is a staff member, ensure they exist in the Staff table
+                if user and user['role'] == 'Staff':
+                    staff = db.selectOne(
+                        "SELECT staff_id FROM Staff WHERE user_id = %s",
+                        (user['user_id'],)
+                    )
+                    if not staff:
+                        return jsonify({"success": False, "error": "Staff record not found"}), 404
+                    session['staff_id'] = staff['staff_id']  # Add staff_id to session
 
                 # Validate credentials for all users
                 if user and user['password'] == password:
@@ -189,6 +192,74 @@ def admin_home():
 def admin_users():
     return render_template('admin/pages/users.html')
 
+@app.route('/admin/create_user', methods=['POST'])
+def create_user():
+    data = request.get_json()
+    print("Received data:", data)  # Debugging: Log the received data
+    
+    # Validation
+    if not all(key in data for key in ['username', 'email', 'password', 'role']):
+        print("Validation failed: Missing required fields")  # Debugging
+        return jsonify({"error": "Missing required fields"}), 400
+    
+    if data['role'] not in ['Manager', 'Staff', 'Customer']:
+        print("Validation failed: Invalid role")  # Debugging
+        return jsonify({"error": "Invalid role"}), 400
+    
+    try:
+        # Check if email already exists
+        with Db() as db:
+            existing_user = db.selectOne("SELECT user_id FROM Users WHERE email = %s", (data['email'],))
+            if existing_user:
+                print("Validation failed: Email already exists")  # Debugging
+                return jsonify({"error": "Email already exists"}), 400
+                
+        # Insert into Users table
+        user_query = """
+        INSERT INTO Users (username, email, password, role)
+        VALUES (%s, %s, %s, %s)
+        """
+        user_values = (
+            data['username'],
+            data['email'],
+            data['password'],  # Store password as plain text
+            data['role']
+        )
+        
+        with Db() as db:
+            user_id = db.insert(user_query, user_values)
+            print("User created with ID:", user_id)  # Debugging
+            
+            # If the user is a manager or staff, insert into respective tables
+            if data['role'] == 'Manager':
+                manager_query = "INSERT INTO Manager (user_id) VALUES (%s)"
+                db.insert(manager_query, (user_id,))
+                print("Manager record created")  # Debugging
+            elif data['role'] == 'Staff':
+                manager_id = get_default_manager_id()
+                staff_query = "INSERT INTO Staff (user_id, manager_id) VALUES (%s, %s)"
+                db.insert(staff_query, (user_id, manager_id))
+                print("Staff record created")  # Debugging
+            elif data['role'] == 'Customer':
+                customer_query = "INSERT INTO Customer (user_id) VALUES (%s)"
+                db.insert(customer_query, (user_id,))
+                print("Customer record created")  # Debugging
+            
+            db.commit()
+            return jsonify({"message": "User created successfully"}), 201
+    except Exception as e:
+        print("Error occurred:", str(e))  # Debugging
+        return jsonify({"error": str(e)}), 400
+
+def get_default_manager_id():
+    # Implement this function to get a default manager ID
+    # This could be the first manager in the system or a specific one
+    with Db() as db:
+        manager = db.selectOne("SELECT manager_id FROM Manager LIMIT 1")
+        return manager['manager_id'] if manager else None
+
+
+
 @app.route('/admin/dashboard')
 def admin_dashboard():
     return render_template('admin/pages/dashboard.html')
@@ -215,16 +286,119 @@ def manager():
 
 @app.route('/staff')
 def staff():
+    if 'staff_id' not in session:
+        return redirect('/login')
+    # Pass staff_id to the template
+    return render_template("staff/index.html", staff_id=session['staff_id'])
 
-    return render_template("staff/index.html")
+def save_product_to_db(product_data):
+    # First, check if category exists
+    category_check_query = "SELECT category_id FROM Category WHERE category_name = %s"
+    category_insert_query = "INSERT INTO Category (category_name) VALUES (%s)"
+    product_insert_query = """
+    INSERT INTO Product (product_name, category_id, price, stock_quantity)
+    VALUES (%s, %s, %s, %s)
+    """
+    inventory_log_query = """
+    INSERT INTO InventoryLog (product_id, change_type, quantity_changed, staff_id)
+    VALUES (%s, 'Added', %s, %s)
+    """
+
+    with Db() as db:
+        try:
+            # Check if category exists
+            category = db.selectOne(category_check_query, (product_data['category'],))
+            
+            if not category:
+                # Insert new category
+                category_id = db.insert(category_insert_query, (product_data['category'],))
+            else:
+                category_id = category['category_id']
+            
+            # Insert product
+            product_values = (
+                product_data['name'],
+                category_id,
+                product_data['price'],
+                product_data['stock']
+            )
+            product_id = db.insert(product_insert_query, product_values)
+            
+            # Log inventory change
+            staff_id = session.get('staff_id')
+            if not staff_id:
+                raise ValueError("Staff ID not found in session")
+            
+            db.insert(inventory_log_query, (product_id, product_data['stock'], staff_id))
+            
+            db.commit()
+            return product_id
+        except Exception as e:
+            db.rollback()
+            raise e
+
+@socketio.on('add_product')
+def handle_add_product(product_data):
+    try:
+        # Get staff_id from session
+        staff_id = session.get('staff_id')
+        if not staff_id:
+            raise ValueError("Staff ID not found in session")
+        
+        # Save to database
+        product_id = save_product_to_db(product_data)
+        
+        # Add product_id to the broadcast data
+        product_data['product_id'] = product_id
+        
+        # Broadcast the new product to all connected clients
+        socketio.emit('new_product', product_data)
+    except Exception as e:
+        print(f"Error adding product: {str(e)}")
+        socketio.emit('error', {'message': str(e)})
+
+def delete_product_from_db(product_id, staff_id):
+    delete_query = "DELETE FROM Product WHERE product_id = %s"
+    inventory_log_query = """
+    INSERT INTO InventoryLog (product_id, change_type, quantity_changed, staff_id)
+    VALUES (%s, 'Removed', 0, %s)
+    """
+
+    with Db() as db:
+        try:
+            # Log the deletion
+            db.insert(inventory_log_query, (product_id, staff_id))
+            
+            # Delete the product
+            db.execute(delete_query, (product_id,))
+            
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e
+
+@socketio.on('delete_product')
+def handle_delete_product(data):
+    try:
+        print("Received delete request:", data)  # Debugging
+        product_id = data.get('product_id')
+        staff_id = data.get('staff_id')
+        
+        if not product_id or not staff_id:
+            raise ValueError("Product ID and Staff ID are required")
+        
+        delete_product_from_db(product_id, staff_id)
+        
+        socketio.emit('product_deleted', {'product_id': product_id})
+    except Exception as e:
+        print(f"Error deleting product: {str(e)}")
+        socketio.emit('error', {'message': str(e)})
+
 
 @app.route('/checkout')
 def checkout():
     return render_template('home/pages/checkout.html')
 
 
-
-
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)
