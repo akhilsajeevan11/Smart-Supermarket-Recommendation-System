@@ -20,108 +20,130 @@
     });
   };
 
-  var initSwiper = function () {
-    var swiper = new Swiper(".main-swiper", {
-      speed: 500,
-      pagination: {
-        el: ".swiper-pagination",
-        clickable: true,
-      },
-    });
 
-    var category_swiper = new Swiper(".category-carousel", {
-      slidesPerView: 6,
-      spaceBetween: 30,
-      speed: 500,
+  document.addEventListener("DOMContentLoaded", function () {
+    const frozenSwiper = new Swiper("#frozen .products-carousel", {
+      slidesPerView: 1, // Default for extra small screens
+      spaceBetween: 10, // Default spacing
       navigation: {
-        nextEl: ".category-carousel-next",
-        prevEl: ".category-carousel-prev",
+        nextEl: "#frozen .products-carousel-next",
+        prevEl: "#frozen .products-carousel-prev",
+      },
+      loop: true, // Enables infinite scrolling
+      autoplay: {
+        delay: 3000, // Auto-slide every 3 seconds
+        disableOnInteraction: false,
       },
       breakpoints: {
-        0: {
+        480: { slidesPerView: 2, spaceBetween: 15 }, // Small screens (phones)
+        768: { slidesPerView: 3, spaceBetween: 20 }, // Tablets
+        1024: { slidesPerView: 4, spaceBetween: 25 }, // Small desktops
+        1280: { slidesPerView: 5, spaceBetween: 30 }, // Large screens
+      },
+    });
+  });
+  
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const frozenSwiper = new Swiper("#bakery .products-carousel", {
+      slidesPerView: 1, // Default for extra small screens
+      spaceBetween: 10, // Default spacing
+      navigation: {
+        nextEl: "#bakery .products-carousel-next",
+        prevEl: "#bakery .products-carousel-prev",
+      },
+      loop: true, // Enables infinite scrolling
+      autoplay: {
+        delay: 3000, // Auto-slide every 3 seconds
+        disableOnInteraction: false,
+      },
+      breakpoints: {
+        480: { slidesPerView: 2, spaceBetween: 15 }, // Small screens (phones)
+        768: { slidesPerView: 3, spaceBetween: 20 }, // Tablets
+        1024: { slidesPerView: 4, spaceBetween: 25 }, // Small desktops
+        1280: { slidesPerView: 5, spaceBetween: 30 }, // Large screens
+      },
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const frozenSwiper = new Swiper("#dairy-eggs .products-carousel", {
+      slidesPerView: 1, // Default for extra small screens
+      spaceBetween: 10, // Default spacing
+      navigation: {
+        nextEl: "#dairy-eggs .products-carousel-next",
+        prevEl: "#dairy-eggs .products-carousel-prev",
+      },
+      loop: true, // Enables infinite scrolling
+      autoplay: {
+        delay: 3000, // Auto-slide every 3 seconds
+        disableOnInteraction: false,
+      },
+      breakpoints: {
+        480: { slidesPerView: 2, spaceBetween: 15 }, // Small screens (phones)
+        768: { slidesPerView: 3, spaceBetween: 20 }, // Tablets
+        1024: { slidesPerView: 4, spaceBetween: 25 }, // Small desktops
+        1280: { slidesPerView: 5, spaceBetween: 30 }, // Large screens
+      },
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const frozenSwiper = new Swiper("#beverages .products-carousel", {
+      slidesPerView: 1, // Default for extra small screens
+      spaceBetween: 10, // Default spacing
+      navigation: {
+        nextEl: "#beverages .products-carousel-next",
+        prevEl: "#beverages .products-carousel-prev",
+      },
+      loop: true, // Enables infinite scrolling
+      autoplay: {
+        delay: 3000, // Auto-slide every 3 seconds
+        disableOnInteraction: false,
+      },
+      breakpoints: {
+        480: { slidesPerView: 2, spaceBetween: 15 }, // Small screens (phones)
+        768: { slidesPerView: 3, spaceBetween: 20 }, // Tablets
+        1024: { slidesPerView: 4, spaceBetween: 25 }, // Small desktops
+        1280: { slidesPerView: 5, spaceBetween: 30 }, // Large screens
+      },
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const frozenSwiper = new Swiper("#newly-arrived .brand-carousel", {
+      slidesPerView: 1, // Default for extra small screens
+      spaceBetween: 10, // Default spacing
+      navigation: {
+        nextEl: "#newly-arrived .brand-carousel-next",
+        prevEl: "#newly-arrived .brand-carousel-prev",
+      },
+      loop: true, // Makes sure it scrolls infinitely
+      autoplay: {
+        delay: 3000, // Auto slide every 3 seconds
+        disableOnInteraction: false,
+      },
+      breakpoints: {
+        480: {
           slidesPerView: 2,
+          spaceBetween: 15,
         },
         768: {
           slidesPerView: 3,
+          spaceBetween: 20,
         },
-        991: {
+        1024: {
           slidesPerView: 4,
+          spaceBetween: 25,
         },
-        1500: {
-          slidesPerView: 6,
-        },
-      },
-    });
-
-    var brand_swiper = new Swiper(".brand-carousel", {
-      slidesPerView: 4,
-      spaceBetween: 30,
-      speed: 500,
-      navigation: {
-        nextEl: ".brand-carousel-next",
-        prevEl: ".brand-carousel-prev",
-      },
-      breakpoints: {
-        0: {
-          slidesPerView: 2,
-        },
-        768: {
-          slidesPerView: 2,
-        },
-        991: {
-          slidesPerView: 3,
-        },
-        1500: {
-          slidesPerView: 4,
+        1280: {
+          slidesPerView: 5,
+          spaceBetween: 30,
         },
       },
     });
-
-    var products_swiper = new Swiper(".products-carousel", {
-      slidesPerView: 5,
-      spaceBetween: 30,
-      speed: 500,
-      navigation: {
-        nextEl: ".products-carousel-next",
-        prevEl: ".products-carousel-prev",
-      },
-      breakpoints: {
-        0: {
-          slidesPerView: 1,
-        },
-        768: {
-          slidesPerView: 3,
-        },
-        991: {
-          slidesPerView: 4,
-        },
-        1500: {
-          slidesPerView: 6,
-        },
-      },
-    });
-  };
-
-  var initProductQty = function () {
-    $(".product-qty").each(function () {
-      var $el_product = $(this);
-      var quantity = 0;
-
-      $el_product.find(".quantity-right-plus").click(function (e) {
-        e.preventDefault();
-        var quantity = parseInt($el_product.find("#quantity").val());
-        $el_product.find("#quantity").val(quantity + 1);
-      });
-
-      $el_product.find(".quantity-left-minus").click(function (e) {
-        e.preventDefault();
-        var quantity = parseInt($el_product.find("#quantity").val());
-        if (quantity > 0) {
-          $el_product.find("#quantity").val(quantity - 1);
-        }
-      });
-    });
-  };
+  });
+  
 
   // init jarallax parallax
   var initJarallax = function () {
@@ -142,12 +164,9 @@
   }); // End of a document
 })(jQuery);
 
-
-
-
 //Add to cart Start
 document.addEventListener("DOMContentLoaded", function () {
-  updateCartUI(); 
+  updateCartUI();
   document.querySelectorAll(".add-to-cart-btn").forEach((button) => {
     button.addEventListener("click", function (event) {
       event.preventDefault();
@@ -182,8 +201,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-
-
   function updateCartUI() {
     const cartTotalDisplay = document.querySelector(".cart-total");
     const cartList = document.querySelector(".cart-items");
@@ -211,7 +228,9 @@ document.addEventListener("DOMContentLoaded", function () {
             <h6 class="my-0">${item.name}</h6>
             <small class="text-body-secondary">Qty: ${item.quantity}</small>
           </div>
-          <span class="text-body-secondary">₹${item.price * item.quantity}</span>
+          <span class="text-body-secondary">₹${
+            item.price * item.quantity
+          }</span>
           <button class="btn btn-sm btn-danger remove-item" data-index="${index}">×</button>
         </li>
       `;
@@ -235,7 +254,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // Add to cart End
-
 
 /// Function to get wishlist from local storage
 // Get wishlist from localStorage
@@ -271,7 +289,7 @@ function removeFromWishlist(title) {
   let wishlist = getWishlist();
   wishlist = wishlist.filter((item) => item.title !== title);
   localStorage.setItem("wishlist", JSON.stringify(wishlist));
-  displayWishlist(false); 
+  displayWishlist(false);
 }
 
 // Function to display wishlist in popup
@@ -280,7 +298,9 @@ function displayWishlist(triggeredByUser = false) {
   let wishlistContainer = document.getElementById("wishlist-popup-content");
 
   // Clear previous content
-  wishlistContainer.innerHTML = wishlist.length ? "" : "<p>Your wishlist is empty.</p>";
+  wishlistContainer.innerHTML = wishlist.length
+    ? ""
+    : "<p>Your wishlist is empty.</p>";
 
   wishlist.forEach((item) => {
     wishlistContainer.innerHTML += `
@@ -290,13 +310,12 @@ function displayWishlist(triggeredByUser = false) {
         <td>₹${item.price}</td>
         <td>${item.qty}</td>
         <td>
-          <button class="remove-btn" onclick="removeFromWishlist('${item.title}')">Remove</button>
+          <button class="remove-btn" onclick="removeFromWishlist('${item.title}')">❌</button>
         </td>
       </tr>
     `;
   });
 
-  // Show popup only if triggered by the user
   if (triggeredByUser) {
     showWishlistPopup();
   }
@@ -314,7 +333,7 @@ function closeWishlistPopup() {
 }
 
 document.getElementById("wishlist-btn").addEventListener("click", function () {
-  displayWishlist(true); 
+  displayWishlist(true);
 });
 
 document.querySelectorAll(".add-to-wishlist-btn").forEach((button) => {
@@ -324,5 +343,59 @@ document.querySelectorAll(".add-to-wishlist-btn").forEach((button) => {
 });
 
 window.addEventListener("load", function () {
-  closeWishlistPopup(); 
+  closeWishlistPopup();
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".dropdown-item").forEach((item) => {
+    item.addEventListener("click", function (e) {
+      const targetId = this.getAttribute("href").substring(1);
+      const targetSection = document.getElementById(targetId);
+
+      if (targetSection) {
+        e.preventDefault();
+        targetSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+});
+
+// profile toogle logout
+
+document.addEventListener("DOMContentLoaded", () => {
+  const profileBtn = document.getElementById("profile-btn");
+  const logoutContainer = document.getElementById("logout-container");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  profileBtn.addEventListener("mouseenter", () => {
+    logoutContainer.style.display = "block";
+  });
+
+  profileBtn.addEventListener("mouseleave", () => {
+    setTimeout(() => {
+      if (!logoutContainer.matches(":hover")) {
+        logoutContainer.style.display = "none";
+      }
+    }, 400);
+  });
+
+  logoutContainer.addEventListener("mouseleave", () => {
+    logoutContainer.style.display = "none";
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    alert("Logging out..."); // Replace this with your logout function
+  });
+});
+
+
+// logout
+
+document.getElementById('logout-btn').addEventListener('click', function() {
+  window.location.href = '/logout';  // This will trigger the Flask logout route
+});
+
+document.getElementById('check-out').addEventListener('click', function() {
+  window.location.href = '/checkout';  // This will trigger the Flask logout route
+});
+
