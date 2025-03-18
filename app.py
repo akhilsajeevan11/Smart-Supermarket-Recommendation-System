@@ -395,9 +395,16 @@ def handle_delete_product(data):
         socketio.emit('error', {'message': str(e)})
 
 
+@app.route('/logout')
+def logout():
+    session.clear()  
+    return redirect(url_for('login'))
+
+
 @app.route('/checkout')
 def checkout():
     return render_template('home/pages/checkout.html')
+
 
 
 if __name__ == '__main__':
