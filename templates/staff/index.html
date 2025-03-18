@@ -34,6 +34,7 @@
       // Set staff_id from Flask session
       window.staffId = "{{ staff_id }}";
     </script>
+
     <!-- Header with Notification Center -->
     <nav class="navbar navbar-expand-lg navbar-dark px-3">
       <a class="navbar-brand fw-bold" href="#">Staff DashBoard</a>
@@ -74,10 +75,10 @@
           </div>
           <div class="col-md-6">
             <select id="category" class="form-select p-3">
-              <option value="Fruits">Frozen</option>
-              <option value="Vegetables">Bakery</option>
-              <option value="Drinks">Dairy & Eggs</option>
-              <option value="Drinks">Beverages</option>
+              <option value="Frozen">Frozen</option>
+              <option value="Bakery">Bakery</option>
+              <option value="Dairy & Eggs">Dairy & Eggs</option>
+              <option value="Beverages">Beverages</option>
             </select>
           </div>
           <div class="col-md-4">
@@ -148,7 +149,27 @@
               </tr>
             </thead>
             <tbody id="product-list">
-              <!-- Dynamic content -->
+              {% if products %}
+                {% for product in products %}
+                  <tr>
+                    <td>
+                      <img src="{{ product.image_url }}" alt="Product Image" width="50" class="img-thumbnail">
+                    </td>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.category }}</td>
+                    <td>{{ product.stock }}</td>
+                    <td>{{ product.promotion if product.promotion else "-" }}</td>
+                    <td>${{ product.price }}</td>
+                    <td>
+                      <button class="btn btn-danger btn-sm" onclick="deleteProduct('{{ product.product_id }}')">
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="7" class="text-center text-muted">No products added</td></tr>
+              {% endif %}
             </tbody>
           </table>
         </div>
@@ -158,5 +179,37 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='staff/js/staff.js') }}"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+          window.products = JSON.parse({{ products | tojson | safe }});
+          updateProductList();
+          checkLowStock();
+      });
+
+      function updateProductList() {
+          let tableBody = document.getElementById("product-list");
+          tableBody.innerHTML = "";
+
+          if (!products || products.length === 0) {
+              tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No products added</td></tr>`;
+              return;
+          }
+
+          tableBody.innerHTML = products.map((product) => 
+              `<tr>
+                  <td><img src="${product.image_url}" alt="Product Image" width="50" class="img-thumbnail"></td>
+                  <td>${product.name}</td>
+                  <td>${product.category}</td>
+                  <td>${product.stock}</td>
+                  <td>${product.promotion ? product.promotion : "-"}</td>
+                  <td>₹${product.price ? product.price.toFixed(2) : "0.00"}</td>
+                  <td>
+                      <button class='btn btn-danger btn-sm' onclick='deleteProduct("${product.product_id}")'>Delete</button>
+                  </td>
+              </tr>`
+          ).join("");
+      }
+    </script>
   </body>
 </html>

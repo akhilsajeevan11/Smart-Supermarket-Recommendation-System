@@ -3,6 +3,10 @@ import mysql.connector
 from mysql.connector import Error, IntegrityError
 from dotenv import load_dotenv
 from pathlib import Path
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load environment variables from .env in parent directory
 env_path = Path(__file__).resolve().parent.parent / '.env'
