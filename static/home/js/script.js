@@ -360,6 +360,59 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+
+
+
+
+function proceedToCheckout() {
+  // Get cart items from the DOM
+  const cartItems = [];
+  document.querySelectorAll('.cart-items .list-group-item').forEach(item => {
+    const productId = item.dataset.productId;
+    const productName = item.querySelector('.product-name').innerText;
+    const productPrice = item.querySelector('.product-price').innerText;
+    cartItems.push({ id: productId, name: productName, price: productPrice });
+  });
+
+  console.log("Cart Data Sent to Server:", cartItems);  // Debug print
+
+  // Send cart data to the checkout route
+  fetch('/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ cartItems }),
+  })
+  .then(response => {
+    if (response.redirected) {
+      window.location.href = response.url; // Redirect to the checkout page
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+
+
+
+function addToCart(productId, productName, productPrice) {
+  const cartItems = document.querySelector('.cart-items');
+  const cartItem = document.createElement('li');
+  cartItem.classList.add('list-group-item');
+  cartItem.setAttribute('data-product-id', productId);
+  cartItem.innerHTML = `
+    <span class="product-name">${productName}</span>
+    <span class="product-price">₹${productPrice}</span>
+  `;
+  cartItems.appendChild(cartItem);
+
+  // Update cart count and total
+  updateCartSummary();
+}
+
+
+
+
 // profile toogle logout
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -398,4 +451,6 @@ document.getElementById('logout-btn').addEventListener('click', function() {
 document.getElementById('check-out').addEventListener('click', function() {
   window.location.href = '/checkout';  // This will trigger the Flask logout route
 });
+
+
 

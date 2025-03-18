@@ -110,7 +110,7 @@
     <div class="row">
         <div class="col-75">
             <div class="container">
-                <form action="/action_page.php">
+                <form id="checkoutForm" action="/checkout" method="POST">
                     <div class="row">
                         <div class="col-50">
                             <h3>Billing Address</h3>
@@ -186,6 +186,43 @@
             </div>
         </div>
     </div>
+
+
+    <script>
+        document.getElementById('checkoutForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the form from submitting normally
+
+            // Get form data
+            const formData = new FormData(this);
+
+            // Convert form data to JSON
+            const jsonData = {};
+            formData.forEach((value, key) => {
+                jsonData[key] = value;
+            });
+
+            // Send data to the backend using AJAX
+            fetch('/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jsonData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                alert('Checkout successful!'); // Show success message
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('Checkout failed. Please try again.'); // Show error message
+            });
+        });
+    </script>
+
+
+
 
 </body>
 </html>
