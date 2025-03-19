@@ -22,49 +22,72 @@
     </nav>
 
     <!-- Main Content -->
-   <!-- Sidebar -->
-<div class="sidebar" id="sidebar">
-    <h4>Manager Panel</h4>
-    <a href="#dashboard" onclick="loadSection('dashboard')">Dashboard</a>
-    <a href="#stock" onclick="loadSection('stock')">Stock Tracking</a>
-</div>
+    <div class="content" id="section-content">
+        <h2 class="text-center">Analytics Dashboard</h2>
 
-<!-- Navbar with Hamburger -->
-<nav class="navbar">
-    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
-</nav>
-
-<!-- Main Content -->
-<div class="content" id="section-content">
-    <h2 class="text-center">Analytics Dashboard</h2>
-
-    <!-- Dashboard Grid -->
-    <div class="dashboard-grid">
-        <div class="dashboard-card">
-            <h5>Future Demanded Products</h5>
-            <canvas id="demandChart"></canvas>
-        </div>
-        <div class="dashboard-card">
-            <h5>Current Sales Trend</h5>
-            <canvas id="salesChart"></canvas>
-        </div>
-        <div class="dashboard-card">
-            <h5>High Performing Products</h5>
-            <canvas id="topProductsChart"></canvas>
-        </div>
-        <div class="dashboard-card">
-            <h5>Customer Preferences</h5>
-            <canvas id="customerChart"></canvas>
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <h5>Future Demanded Products</h5>
+                <canvas id="demandChart"></canvas>
+            </div>
+            <div class="dashboard-card">
+                <h5>Current Sales Trend</h5>
+                <canvas id="salesChart"></canvas>
+            </div>
+            <div class="dashboard-card">
+                <h5>High Performing Products</h5>
+                <canvas id="topProductsChart"></canvas>
+            </div>
+            <div class="dashboard-card">
+                <h5>Customer Preferences</h5>
+                <canvas id="customerChart"></canvas>
+            </div>
         </div>
     </div>
-</div>
 
+    <!-- Stock Tracking Section -->
+    <div id="stock-section" class="content" style="display: none;">
+        <h2 class="text-center">Stock Tracking</h2>
+        <!-- <div id="stock-alert" class="alert alert-info text-center">Stock levels are up to date.</div> -->
+
+        <!-- Low Stock Products Table -->
+        <div class="table-responsive mt-4">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Stock Quantity</th>
+                    </tr>
+                </thead>
+                <tbody id="low-stock-products">
+                    {% if low_stock_products %}
+                        {% for product in low_stock_products %}
+                            <tr>
+                                <td>{{ product.product_name }}</td>
+                                <td>{{ product.stock_quantity }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="2" class="text-center text-muted">No low-stock products found.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Notify Staff Button and Response -->
+        <div class="text-center mt-4">
+            <button class="btn btn-primary" onclick="notifyStaff()">Notify Staff</button>
+        </div>
+        <div id="notification-response" class="mt-3 text-center"></div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='manager/js/manager.js') }}"></script>
-
 </body>
 </html>
 

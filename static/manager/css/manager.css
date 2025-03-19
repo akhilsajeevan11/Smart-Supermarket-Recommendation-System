@@ -70,6 +70,59 @@ body {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
+/* Stock Tracking Section */
+#stock-section {
+    margin-left: 280px;
+    padding: 30px;
+    background-color: #fffff0;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+#stock-section h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #1f2937;
+}
+
+#stock-alert {
+    margin-bottom: 20px;
+}
+
+/* Low Stock Products Table */
+.table-responsive {
+    margin-top: 20px;
+    overflow-x: auto;
+}
+
+.table-striped {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.table-striped th,
+.table-striped td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.table-striped th {
+    background-color: #1f2937;
+    color: white;
+    font-weight: bold;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f8f9fa;
+}
+
+.table-striped tbody tr:hover {
+    background-color: #e9ecef;
+}
+
 /* Sidebar Toggle */
 .hamburger {
     font-size: 24px;
@@ -114,6 +167,10 @@ body {
     }
 
     .content {
+        margin-left: 0;
+    }
+
+    #stock-section {
         margin-left: 0;
     }
 
