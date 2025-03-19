@@ -46,7 +46,7 @@
             border-radius: 3px;
         }
 
-        input[type=text], input[type=month] {
+        input[type=text], input[type=month], select {
             width: 100%;
             margin-bottom: 20px;
             padding: 12px;
@@ -57,12 +57,6 @@
         label {
             margin-bottom: 10px;
             display: block;
-        }
-
-        .icon-container {
-            margin-bottom: 20px;
-            padding: 7px 0;
-            font-size: 24px;
         }
 
         .btn {
@@ -106,7 +100,7 @@
 </head>
 <body>
 
-    <h2>CheckOut</h2>
+    <h2>Checkout</h2>
     <div class="row">
         <div class="col-75">
             <div class="container">
@@ -115,51 +109,56 @@
                         <div class="col-50">
                             <h3>Billing Address</h3>
                             <label for="fname"><i class="fa fa-user"></i> Full Name</label>
-                            <input type="text" id="fname" name="firstname" placeholder="Akhil Sajeeev">
+                            <input type="text" id="fname" name="firstname" placeholder="Akhil Sajeeev" required>
                             
                             <label for="email"><i class="fa fa-envelope"></i> Email</label>
-                            <input type="text" id="email" name="email" placeholder="akhil@example.com">
+                            <input type="text" id="email" name="email" placeholder="akhil@example.com" required>
                             
                             <label for="adr"><i class="fa fa-address-card-o"></i> Address</label>
-                            <input type="text" id="adr" name="address" placeholder="542 W. 15th Street">
+                            <input type="text" id="adr" name="address" placeholder="542 W. 15th Street" required>
                             
                             <label for="city"><i class="fa fa-institution"></i> City</label>
-                            <input type="text" id="city" name="city" placeholder="India">
+                            <input type="text" id="city" name="city" placeholder="India" required>
 
                             <div class="row">
                                 <div class="col-50">
                                     <label for="state">State</label>
-                                    <input type="text" id="state" name="state" placeholder="IN">
+                                    <input type="text" id="state" name="state" placeholder="IN" required>
                                 </div>
                                 <div class="col-50">
                                     <label for="zip">Pincode</label>
-                                    <input type="text" id="zip" name="zip" placeholder="670685">
+                                    <input type="text" id="zip" name="zip" placeholder="670685" required>
                                 </div>
                             </div>
                         </div>
 
                         <div class="col-50">
                             <h3>Payment</h3>
-                            <label for="fname">Accepted Cards</label>
-                            <div class="icon-container">
-                                <i class="fa fa-cc-visa" style="color:navy;"></i>
-                                <i class="fa fa-cc-mastercard" style="color:red;"></i>
-                                <i class="fa fa-cc-discover" style="color:orange;"></i>
-                            </div>
+                            <label for="cardtype">Select Payment Method</label>
+                            <select id="cardtype" name="cardtype" required>
+                                <option value="">--Select Payment Method--</option>
+                                <option value="cod">Cash on Delivery</option>
+                                <option value="visa">Visa</option>
+                                <option value="mastercard">MasterCard</option>
+                                <option value="discover">Discover</option>
+                                <option value="american_express">American Express</option>
+                            </select>
                             
-                            <label for="cname">Name on Card</label>
-                            <input type="text" id="cname" name="cardname" placeholder="John More Doe">
-                            
-                            <label for="ccnum">Credit card number</label>
-                            <input type="text" id="ccnum" name="cardnumber" placeholder="1111-2222-3333-4444">
-                            
-                            <label for="expmonth">Expiry Date</label>
-                            <input type="month" id="expmonth" name="expmonth">
-                            
-                            <div class="row">
-                                <div class="col-50">
-                                    <label for="cvv">CVV</label>
-                                    <input type="text" id="cvv" name="cvv" placeholder="352">
+                            <div id="card-details">
+                                <label for="cname">Name on Card</label>
+                                <input type="text" id="cname" name="cardname" placeholder="John More Doe">
+                                
+                                <label for="ccnum">Credit card number</label>
+                                <input type="text" id="ccnum" name="cardnumber" placeholder="1111-2222-3333-4444">
+                                
+                                <label for="expmonth">Expiry Date</label>
+                                <input type="month" id="expmonth" name="expmonth">
+                                
+                                <div class="row">
+                                    <div class="col-50">
+                                        <label for="cvv">CVV</label>
+                                        <input type="text" id="cvv" name="cvv" placeholder="352">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -187,8 +186,20 @@
         </div>
     </div>
 
-
     <script>
+        
+        const cardTypeSelect = document.getElementById('cardtype');
+        const cardDetails = document.getElementById('card-details');
+
+        cardTypeSelect.addEventListener('change', function () {
+            if (this.value === 'cod') {
+                cardDetails.style.display = 'none';
+            } else {
+                cardDetails.style.display = 'block';
+            }
+        });
+
+        // Handle form submission using fetch
         document.getElementById('checkoutForm').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent the form from submitting normally
 
@@ -201,7 +212,7 @@
                 jsonData[key] = value;
             });
 
-            // Send data to the backend using AJAX
+            // Send data to the backend using fetch
             fetch('/checkout', {
                 method: 'POST',
                 headers: {
@@ -220,9 +231,6 @@
             });
         });
     </script>
-
-
-
 
 </body>
 </html>
