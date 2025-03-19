@@ -1,20 +1,34 @@
-// Toggle Sidebar for Mobile
-function toggleSidebar() {
-    let sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('open');
+// Notify Staff
+function notifyStaff() {
+    const lowStockProducts = document.querySelectorAll('#low-stock-products tr');
+    lowStockProducts.forEach(row => {
+        const productName = row.cells[0].textContent;
+        const stockQuantity = row.cells[1].textContent;
+
+        // Send notification to staff
+        socket.emit('notify_staff', {
+            productName: productName,
+            stockQuantity: stockQuantity
+        });
+    });
+
+    // Show success message
+    document.getElementById('notification-response').innerHTML = `
+        <div class="alert alert-success">Notification sent to staff!</div>
+    `;
 }
 
 // Load Sections
 function loadSection(section) {
     let content = document.getElementById('section-content');
+    let stockSection = document.getElementById('stock-section');
+
     if (section === 'stock') {
-        content.innerHTML = `
-            <h2 class="text-center">Stock Tracking</h2>
-            <div id="stock-alert" class="alert alert-info">Stock levels are up to date.</div>
-            <button class='btn btn-danger' onclick='notifyStaff()'>Notify Staff</button>
-            <div id="notification-response" class="mt-3"></div>`;
+        content.style.display = 'none'; // Hide the dashboard
+        stockSection.style.display = 'block'; // Show the stock section
     } else {
-        location.reload();
+        content.style.display = 'block'; // Show the dashboard
+        stockSection.style.display = 'none'; // Hide the stock section
     }
 }
 
@@ -42,3 +56,13 @@ function renderChart(canvasId, type, labels, data, label, colors) {
         }
     });
 }
+
+// Toggle Sidebar for Mobile
+function toggleSidebar() {
+    let sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('open');
+}
+
+socket.on('connect', () => {
+    console.log('Connected to Socket.IO server');
+});

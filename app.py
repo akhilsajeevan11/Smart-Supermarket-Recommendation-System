@@ -5,7 +5,7 @@ import bcrypt
 import re
 from mysql.connector import IntegrityError
 import traceback
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, emit
 import json
 from werkzeug.utils import secure_filename
 import logging
@@ -330,18 +330,35 @@ def admin_sales():
 def admin_security():
     return render_template('admin/pages/security.html')
 
-
+@socketio.on('notify_staff')
+def handle_notify_staff(data):
+    # Broadcast the notification to all staff
+    emit('new_notification', data, broadcast=True)
 
 @app.route('/manager')
 def manager():
+    try:
+        # Fetch products with stock quantity below 10
+        low_stock_query = """
+        SELECT product_name, stock_quantity
+        FROM Product
+        WHERE stock_quantity < 10
+        """
+        with Db() as db:
+            low_stock_products = db.select(low_stock_query)
 
-    return render_template("manager/index.html")
+        # Render the template with low-stock products
+        return render_template("manager/index.html", low_stock_products=low_stock_products)
+
+    except Exception as e:
+        print(f"Error fetching low-stock products: {str(e)}")
+        return render_template("manager/index.html", low_stock_products=[])
 
 
 
 
 
-import os
+
 
 UPLOAD_FOLDER = "static/uploads"  # Ensure this matches your actual folder path
 
@@ -427,6 +444,10 @@ def save_product_to_db(product_data, image_file):
     INSERT INTO Product (product_name, category_id, price, stock_quantity, image_url)
     VALUES (%s, %s, %s, %s, %s)
     """
+    inventory_log_query = """
+    INSERT INTO InventoryLog (product_id, change_type, quantity_changed, staff_id)
+    VALUES (%s, 'Added', %s, %s)
+    """
 
     with Db() as db:
         try:
@@ -454,12 +475,18 @@ def save_product_to_db(product_data, image_file):
                 image_url
             )
             product_id = db.insert(product_insert_query, product_values)
+
+            # Log the addition in InventoryLog
+            staff_id = session.get('staff_id')
+            if staff_id:
+                db.insert(inventory_log_query, (product_id, int(product_data['stock']), staff_id))
+
             db.commit()
-            return product_id, image_url  # ✅ Return both values correctly
+            return product_id, image_url
         except Exception as e:
             db.rollback()
             print(f"Error inserting product: {str(e)}")
-            return None, None  # ✅ Return None in case of error
+            return None, None
 
 
 @app.route('/add_product', methods=['POST'])
@@ -471,7 +498,7 @@ def add_product():
         if not image_file:
             return jsonify({"error": "Image file is required"}), 400
 
-        product_id, image_url = save_product_to_db(product_data, image_file)  # ✅ Fix unpacking
+        product_id, image_url = save_product_to_db(product_data, image_file)
 
         if product_id is None:
             return jsonify({"success": False, "message": "Failed to add product"}), 500
@@ -513,19 +540,50 @@ def handle_add_product(data):
 
 
 
+# @app.route('/delete_product/<int:product_id>', methods=['DELETE'])
+# def delete_product(product_id):
+#     try:
+#         staff_id = session.get('staff_id')
+#         if not staff_id:
+#             return jsonify({"success": False, "message": "Staff ID not found in session"}), 400
+
+#         # ✅ Delete the product
+#         delete_product_from_db(product_id, staff_id)
+
+#         # ✅ Update the InventoryLog
+#         response = update_inventory_log(product_id)
+#         if not response.get_json()["success"]:  # Use get_json() to parse the response
+#             return response  # Return the error response from update_inventory_log
+
+#         socketio.emit('product_deleted', {'product_id': product_id})  # WebSocket Emit
+#         return jsonify({"success": True, "message": "Product deleted and inventory log updated"})
+
+#     except Exception as e:
+#         print(f"Error deleting product: {str(e)}")
+#         return jsonify({"success": False, "message": str(e)}), 500
+
 @app.route('/delete_product/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
     try:
-        with Db() as db:
-            db.execute("DELETE FROM Product WHERE product_id = %s", (product_id,))
-            db.commit()
+        staff_id = session.get('staff_id')
+        if not staff_id:
+            return jsonify({"success": False, "message": "Staff ID not found in session"}), 400
 
-        socketio.emit('product_deleted', {'product_id': product_id})  # ✅ WebSocket Emit
-        return jsonify({"success": True, "message": "Product deleted"}), 200
+        # ✅ Update the InventoryLog first
+        update_response = update_inventory_log(product_id)
+        if not update_response.json["success"]:
+            return update_response  # Return the error response from update_inventory_log
+
+        # ✅ Delete the product after updating the log
+        delete_product_from_db(product_id, staff_id)
+
+        socketio.emit('product_deleted', {'product_id': product_id})  # WebSocket Emit
+        return jsonify({"success": True, "message": "Product deleted and inventory log updated"}), 200
 
     except Exception as e:
         print(f"Error deleting product: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
+
 
 
 @socketio.on('delete_product')
@@ -549,19 +607,14 @@ def delete_product_from_db(product_id, staff_id):
     """Deletes product from the database and removes its image file."""
     delete_query = "DELETE FROM Product WHERE product_id = %s"
     select_image_query = "SELECT image_url FROM Product WHERE product_id = %s"
-    inventory_log_query = """
-    INSERT INTO InventoryLog (product_id, change_type, quantity_changed, staff_id)
-    VALUES (%s, 'Removed', 0, %s)
-    """
 
     with Db() as db:
         try:
             # ✅ Fetch the product image path before deletion
-            db.execute(select_image_query, (product_id,))
-            image_result = db.fetchone()
+            image_result = db.selectOne(select_image_query, (product_id,))  # Use selectOne instead of fetchone
 
-            if image_result and image_result[0]:  # ✅ Ensure image exists
-                image_url = image_result[0].strip("/")  # Normalize path
+            if image_result and image_result["image_url"]:  # ✅ Ensure image exists
+                image_url = image_result["image_url"].strip("/")  # Normalize path
                 image_path = os.path.join(UPLOAD_FOLDER, os.path.basename(image_url))
 
                 print(f"🔍 Checking image path: {image_path}")  # Debugging
@@ -571,10 +624,7 @@ def delete_product_from_db(product_id, staff_id):
                 else:
                     print(f"⚠️ Image file not found: {image_path}")
 
-            # ✅ Insert delete log
-            db.insert(inventory_log_query, (product_id, staff_id))
-
-            # ✅ Delete product from database
+            # ✅ Delete product from the Product table
             db.execute(delete_query, (product_id,))
             db.commit()
 
@@ -676,6 +726,45 @@ def checkout():
             return jsonify({'status': 'error', 'message': f"Checkout failed: {str(e)}"}), 500
 
     return render_template('home/pages/checkout.html')
+
+@app.route('/update_inventory_log/<int:product_id>', methods=['PUT'])
+def update_inventory_log(product_id):
+    """Updates the change_type in InventoryLog to 'Removed' for the latest entry."""
+    try:
+        staff_id = session.get('staff_id')
+        if not staff_id:
+            return jsonify({"success": False, "message": "Staff ID not found in session"}), 400
+
+        # ✅ Find the latest log entry for the product
+        find_latest_log_query = """
+        SELECT log_id FROM InventoryLog
+        WHERE product_id = %s
+        ORDER BY change_date DESC
+        LIMIT 1
+        """
+
+        # ✅ Update the latest log entry
+        update_inventory_log_query = """
+        UPDATE InventoryLog
+        SET change_type = 'Removed'
+        WHERE log_id = %s
+        """
+
+        with Db() as db:
+            # ✅ Find the latest log entry
+            latest_log = db.selectOne(find_latest_log_query, (product_id,))
+            if not latest_log:
+                return jsonify({"success": False, "message": "No log entry found for the product"}), 404
+
+            # ✅ Update the latest log entry
+            db.execute(update_inventory_log_query, (latest_log["log_id"],))
+            db.commit()
+
+        return jsonify({"success": True, "message": "Inventory log updated successfully"})
+
+    except Exception as e:
+        print(f"❌ Error updating inventory log: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     fetchProducts(); // Fetch products when page loads
     socket.on("new_product", (product) => addProductToUI(product));  // Listen for real-time updates
     socket.on("product_deleted", (data) => removeProductFromUI(data.product_id)); // Listen for deletions
+    socket.on("new_notification", (data) => handleNewNotification(data)); // Listen for notifications
 });
 
 // Fetch all products from backend
@@ -42,7 +43,6 @@ function updateProductList() {
         </tr>`
     ).join("");
 }
-
 
 function addOrUpdateProduct() {
     console.log("Add Product button clicked");  // ✅ Debugging statement
@@ -88,9 +88,6 @@ function addOrUpdateProduct() {
     .catch(error => console.error("Error:", error));
 }
 
-
-
-
 // Add a new product dynamically
 function addProductToUI(product) {
     window.products.push(product);
@@ -113,7 +110,6 @@ function deleteProduct(product_id) {
         })
         .catch(error => console.error("Error:", error));
 }
-
 
 // Remove product from UI
 function removeProductFromUI(product_id) {
@@ -156,6 +152,30 @@ function previewImage(event) {
 
 // Toggle notifications dropdown
 function toggleNotifications() {
-    let dialog = document.getElementById('notification-dialog');
-    dialog.style.display = dialog.style.display === 'none' || dialog.style.display === '' ? 'block' : 'none';
+    let dialog = document.getElementById("notification-dialog");
+    dialog.style.display = dialog.style.display === "none" || dialog.style.display === "" ? "block" : "none";
+}
+
+// Handle new notifications
+function handleNewNotification(data) {
+    const notificationList = document.getElementById("notification-list");
+    const notificationBadge = document.getElementById("notification-badge");
+
+    // Create a new notification item
+    const notificationItem = document.createElement("li");
+    notificationItem.className = "list-group-item";
+    notificationItem.textContent = `Low stock: ${data.productName} (${data.stockQuantity} left)`;
+
+    // Remove the "No notifications" message if it exists
+    if (notificationList.firstElementChild?.classList.contains("text-muted")) {
+        notificationList.removeChild(notificationList.firstElementChild);
+    }
+
+    // Add the new notification to the top of the list
+    notificationList.insertBefore(notificationItem, notificationList.firstChild);
+
+    // Update the notification badge
+    const currentCount = parseInt(notificationBadge.textContent) || 0;
+    notificationBadge.textContent = currentCount + 1;
+    notificationBadge.classList.remove("d-none");
 }
