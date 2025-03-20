@@ -1,29 +1,96 @@
-body {
-    background-color: #fffff0;}
+
+body{
+    background-color: #fffff0;
+}
 .sidebar {
-    height: 100vh;
-    width: 220px; /* Slightly wider for better spacing */
-    background: #1f2937;
-    color: white;
-    padding: 15px;
-    position: fixed;
+    width: 250px;
+    max-height: 100vh;
+    height: 100vh; 
+    background-color: #343a40;
+    color: #fff;
+    padding: 1rem;
+    position: relative;
 }
 .sidebar a {
-    color: white;
-    text-decoration: none;
     display: block;
-    padding: 12px;
-    cursor: pointer;
+    padding: 0.5rem 0;
+    color: #fff;
+    text-decoration: none;
 }
 .sidebar a:hover {
-    background: #495057;
+    background-color: #495057;
+    border-radius: 4px;
 }
-.content {
-    margin-left: 240px; /* Adjusted to match sidebar */
-    padding: 20px;
+
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 0;               /* Ensure it sticks from the top */
+        left: -250px;
+        height: 100vh;        /* Ensure full height in fixed mode */
+        z-index: 1000;
+        transition: left 0.3s;
+    }
+    .sidebar.active {
+        left: 0;
+    }
+    #dashboard {
+        position: relative;
+        height: 400px; /* Or auto if you want it to scale with the container */
+    }
+    #salesChart {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    
+    .content {
+        padding-top: 20px;    /* Optional: Add top padding if you have a fixed header */
+    }
 }
-/* canvas {
-    display: block;
-    max-width: 100%;
+
+
+/* User management css */
+.card-modern {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    max-width: 750px;
     margin: auto;
-} */
+    transition: transform 0.2s;
+}
+.form-control-modern {
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 10px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    width: 100%;
+}
+.form-control-modern:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    outline: none;
+}
+
+.btn-modern {
+    background-color: #ffc43f;
+    border: none;
+    color: #fff;
+    padding: 6px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+.btn-modern:hover {
+    background-color: #f8b517;
+    transform: scale(1.03);
+}
+
+h3 {
+    color: #ffc43f;
+}
+
+label {
+    font-weight: 500;
+}
