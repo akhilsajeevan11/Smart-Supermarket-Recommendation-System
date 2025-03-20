@@ -1,15 +1,34 @@
 // Notify Staff
 function notifyStaff() {
     const lowStockProducts = document.querySelectorAll('#low-stock-products tr');
+    const managerId = window.managerId; // Get manager_id from the global variable
+
     lowStockProducts.forEach(row => {
+        const productId = row.getAttribute('data-product-id'); // Get product_id from the data attribute
         const productName = row.cells[0].textContent;
         const stockQuantity = row.cells[1].textContent;
 
-        // Send notification to staff
-        socket.emit('notify_staff', {
-            productName: productName,
-            stockQuantity: stockQuantity
-        });
+        // Send data to backend
+        fetch('/notify_staff', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                product_id: productId, // Include product_id
+                product_name: productName,
+                stock_quantity: stockQuantity,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Notification inserted:', data.message);
+            } else {
+                console.error('Error:', data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
     });
 
     // Show success message

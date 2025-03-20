@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='manager/css/manager.css') }}">
 </head>
 <body>
+    <script>
+        // Set manager_id from Flask session
+        window.managerId = "{{ session.manager_id }}";
+    </script>
 
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
@@ -63,7 +67,7 @@
                 <tbody id="low-stock-products">
                     {% if low_stock_products %}
                         {% for product in low_stock_products %}
-                            <tr>
+                            <tr data-product-id="{{ product.product_id }}">
                                 <td>{{ product.product_name }}</td>
                                 <td>{{ product.stock_quantity }}</td>
                             </tr>

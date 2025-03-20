@@ -10,9 +10,27 @@ import json
 from werkzeug.utils import secure_filename
 import logging
 from datetime import datetime
+from dotenv import load_dotenv
+import pickle
 
 UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+load_dotenv()
+model_path = os.getenv('MODEL_PATH')
+
+# Load the pre-trained model from the pickle file
+def load_model(model_path):
+    try:
+        with open(model_path, 'rb') as file:
+            model = pickle.load(file)
+        return model
+    except Exception as e:
+        print(f"Error loading model: {str(e)}")
+        return None
+
+# Load the model
+model = load_model(model_path)  # ✅ Load the model, not just the path
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -100,6 +118,16 @@ def login():
                         return jsonify({"success": False, "error": "Staff record not found"}), 404
                     session['staff_id'] = staff['staff_id']  # Add staff_id to session
 
+                # If user is a manager, ensure they exist in the Manager table
+                if user and user['role'] == 'Manager':
+                    manager = db.selectOne(
+                        "SELECT manager_id FROM Manager WHERE user_id = %s",
+                        (user['user_id'],)
+                    )
+                    if not manager:
+                        return jsonify({"success": False, "error": "Manager record not found"}), 404
+                    session['manager_id'] = manager['manager_id']  # Add manager_id to session
+
                 # Validate credentials for all users
                 if user and user['password'] == password:
                     session.update({
@@ -138,11 +166,45 @@ def login():
 
     return render_template('login/login.html')
 
-# @app.route('/home')
-# def home():
-#     if 'user_id' not in session:
-#         return redirect(url_for('login'))
-#     return render_template("/home/index.html")
+
+
+
+
+
+@app.route('/recommend', methods=['POST'])
+def recommend():
+    try:
+        # Get input data from the request
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "message": "No input data provided"}), 400
+
+        # Example: Extract product_id or user_id from the input data
+        product_id = data.get('product_id')
+        user_id = data.get('user_id')
+
+        if not product_id or not user_id:
+            return jsonify({"success": False, "message": "Missing required fields (product_id or user_id)"}), 400
+
+        # Prepare input for the model (modify this based on your model's requirements)
+        input_data = [[product_id, user_id]]  # Example input format
+
+        # Generate recommendations using the model
+        recommendations = model.predict(input_data)  # Use the appropriate method for your model
+
+        # Return the recommendations
+        return jsonify({
+            "success": True,
+            "recommendations": recommendations.tolist()  # Convert numpy array to list
+        })
+
+    except Exception as e:
+        print(f"Error generating recommendations: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+
+
 
 
 @app.route('/home')
@@ -337,10 +399,13 @@ def handle_notify_staff(data):
 
 @app.route('/manager')
 def manager():
+    if 'manager_id' not in session:  # Check if manager is logged in
+        return redirect(url_for('login'))
+
     try:
         # Fetch products with stock quantity below 10
         low_stock_query = """
-        SELECT product_name, stock_quantity
+        SELECT product_id, product_name, stock_quantity
         FROM Product
         WHERE stock_quantity < 10
         """
@@ -362,6 +427,34 @@ def manager():
 
 UPLOAD_FOLDER = "static/uploads"  # Ensure this matches your actual folder path
 
+@app.route("/send_notification", methods=["POST"])
+def send_notification():
+    try:
+        data = request.get_json()
+        product_name = data.get("product_name")
+        stock_quantity = data.get("stock_quantity")
+        staff_id = data.get("staff_id")
+
+        if not product_name or not stock_quantity or not staff_id:
+            return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+        # Insert notification into StockTracking table
+        message = f"Low stock alert: {product_name} (Quantity: {stock_quantity})"
+        insert_query = """
+            INSERT INTO StockTracking (product_name, stock_quantity, message, staff_id)
+            VALUES (%s, %s, %s, %s)
+        """
+        with Db() as db:
+            db.execute(insert_query, (product_name, stock_quantity, message, staff_id))
+            db.commit()
+
+        return jsonify({"success": True, "message": "Notification sent successfully"})
+
+    except Exception as e:
+        print(f"Error sending notification: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 @app.route("/staff")
 def staff():
     if 'staff_id' not in session:  # Check if staff is logged in
@@ -369,12 +462,24 @@ def staff():
 
     try:
         with Db() as db:
-            query = """
+            # Fetch products
+            product_query = """
                 SELECT product_id, product_name, category_id, price, stock_quantity, image_url
                 FROM Product
             """
-            products = db.select(query)
+            products = db.select(product_query)
 
+            # Fetch notifications (only the message) from StockTracking table
+            notification_query = """
+                SELECT message
+                FROM StockTracking
+                ORDER BY tracking_id DESC
+                LIMIT 5
+            """
+            notifications = db.select(notification_query)
+            print(f"Notifications fetched: {notifications}")  # Debugging
+
+        # Process product images
         for product in products:
             filename = product["image_url"].lstrip("/static/uploads/")  # Get the file name
             image_path = os.path.join(UPLOAD_FOLDER, filename)
@@ -385,7 +490,8 @@ def staff():
             else:
                 product["image_url"] = f"/static/uploads/{filename}"
 
-        return render_template("staff/index.html", products=products)
+        # Render the template with products and notifications
+        return render_template("staff/index.html", products=products, notifications=notifications)
 
     except Exception as e:
         print(f"⚠️ Error fetching products: {e}")
@@ -764,6 +870,42 @@ def update_inventory_log(product_id):
 
     except Exception as e:
         print(f"❌ Error updating inventory log: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route("/notify_staff", methods=["POST"])
+def notify_staff():
+    try:
+        data = request.get_json()
+        product_id = data.get('product_id')  # Get product_id from the request
+        product_name = data.get('product_name')
+        stock_quantity = data.get('stock_quantity')
+        manager_id = session.get('manager_id')  # Get manager_id from the session
+
+        if not manager_id:
+            return jsonify({"success": False, "message": "Manager ID not found in session"}), 400
+
+        # Fetch a default staff_id (e.g., the first staff member)
+        with Db() as db:
+            staff_query = "SELECT staff_id FROM Staff LIMIT 1"
+            staff_result = db.selectOne(staff_query)
+            if not staff_result:
+                return jsonify({"success": False, "message": "No staff found"}), 400
+
+            staff_id = staff_result["staff_id"]
+
+            # Insert into StockTracking table
+            insert_query = """
+            INSERT INTO StockTracking (product_id, product_name, stock_quantity, message, manager_id, staff_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            message = f"Low stock alert: {product_name} (Product ID: {product_id}, Quantity: {stock_quantity})"
+            db.execute(insert_query, (product_id, product_name, stock_quantity, message, manager_id, staff_id))
+            db.commit()  # Commit the transaction
+
+        return jsonify({"success": True, "message": "Notification inserted successfully"})
+
+    except Exception as e:
+        print(f"Error inserting notification: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 if __name__ == '__main__':
