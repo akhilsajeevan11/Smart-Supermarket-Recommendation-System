@@ -164,7 +164,7 @@ function handleNewNotification(data) {
     // Create a new notification item
     const notificationItem = document.createElement("li");
     notificationItem.className = "list-group-item";
-    notificationItem.textContent = `Low stock: ${data.productName} (${data.stockQuantity} left)`;
+    notificationItem.textContent = data.message;
 
     // Remove the "No notifications" message if it exists
     if (notificationList.firstElementChild?.classList.contains("text-muted")) {
@@ -178,4 +178,28 @@ function handleNewNotification(data) {
     const currentCount = parseInt(notificationBadge.textContent) || 0;
     notificationBadge.textContent = currentCount + 1;
     notificationBadge.classList.remove("d-none");
+}
+
+// Send a notification
+function sendNotification(productName, stockQuantity, staffId) {
+    fetch("/send_notification", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            product_name: productName,
+            stock_quantity: stockQuantity,
+            staff_id: staffId,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log("Notification sent:", data.message);
+        } else {
+            console.error("Error sending notification:", data.message);
+        }
+    })
+    .catch(error => console.error("Error:", error));
 }

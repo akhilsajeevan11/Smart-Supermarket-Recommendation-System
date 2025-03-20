@@ -41,13 +41,21 @@
       <div class="ms-auto position-relative">
         <button class="btn btn-warning" onclick="toggleNotifications()">
           Notifications
-          <span id="notification-badge" class="badge bg-danger d-none">0</span>
+          <span id="notification-badge" class="badge bg-danger d-none">{{ notifications|length }}</span>
         </button>
         <!-- Notification Dialog -->
         <div id="notification-dialog" class="notification-dialog p-3">
           <h6 class="text-center fw-bold">Notifications</h6>
           <ul id="notification-list" class="list-group list-group-flush">
-            <li class="list-group-item text-muted">No notifications</li>
+            {% if notifications %}
+              {% for notification in notifications %}
+                <li class="list-group-item">
+                  {{ notification.message }}
+                </li>
+              {% endfor %}
+            {% else %}
+              <li class="list-group-item text-muted">No notifications</li>
+            {% endif %}
           </ul>
         </div>
       </div>
