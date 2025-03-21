@@ -365,50 +365,99 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 function proceedToCheckout() {
-  // Get cart items from the DOM
-  const cartItems = [];
-  document.querySelectorAll('.cart-items .list-group-item').forEach(item => {
-    const productId = item.dataset.productId;
-    const productName = item.querySelector('.product-name').innerText;
-    const productPrice = item.querySelector('.product-price').innerText;
-    cartItems.push({ id: productId, name: productName, price: productPrice });
-  });
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
 
-  console.log("Cart Data Sent to Server:", cartItems);  // Debug print
+  // Calculate total amount
+  const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Send cart data to the checkout route
+  // Prepare data for checkout
+  const cartData = cart.map(item => ({
+    product_id: item.product_id, // Ensure this matches the product ID in your database
+    product_name: item.product_name, // Optional: Include product name for debugging
+    quantity: item.quantity,
+    amount: item.price * item.quantity // Calculate total amount for each item
+  }));
+
+  // Log data for debugging
+  console.log("Cart data:", cartData);
+  console.log("Total amount:", totalAmount);
+
+  // Send cart data and total amount to the checkout route
   fetch('/checkout', {
-    method: 'POST',
+    method: 'POST',  // Ensure this is a POST request
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json',  // Ensure the correct Content-Type header
     },
-    body: JSON.stringify({ cartItems }),
+    body: JSON.stringify({ cart_items: cartData, total_amount: totalAmount }),  // Ensure the body is JSON
   })
   .then(response => {
     if (response.redirected) {
-      window.location.href = response.url; // Redirect to the checkout page
+      window.location.href = response.url; // Redirect to the payment page
+    } else {
+      return response.json();
     }
   })
-  .catch(error => console.error('Error:', error));
+  .then(data => {
+    if (data && data.error) {
+      alert('Checkout failed: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Checkout failed. Please try again.');
+  });
 }
 
 
 
+function addToCart(productId) {
+  console.log("Product ID:", productId); // Debugging: Log the product ID
 
-function addToCart(productId, productName, productPrice) {
-  const cartItems = document.querySelector('.cart-items');
-  const cartItem = document.createElement('li');
-  cartItem.classList.add('list-group-item');
-  cartItem.setAttribute('data-product-id', productId);
-  cartItem.innerHTML = `
-    <span class="product-name">${productName}</span>
-    <span class="product-price">₹${productPrice}</span>
-  `;
-  cartItems.appendChild(cartItem);
+  const productItem = document.querySelector(`[data-product-id="${productId}"]`);
+  if (!productItem) {
+      console.error("Product item not found for ID:", productId);
+      return;
+  }
 
-  // Update cart count and total
-  updateCartSummary();
+  const productName = productItem.querySelector('h3').textContent;
+  const productPrice = productItem.querySelector('.price').textContent.replace('₹', '');
+  const productQuantity = productItem.querySelector('.input-number').value;
+
+  console.log("Product Name:", productName); // Debugging: Log the product name
+  console.log("Product Price:", productPrice); // Debugging: Log the product price
+  console.log("Product Quantity:", productQuantity); // Debugging: Log the product quantity
+
+  const cartItem = {
+      product_id: parseInt(productId),
+      product_name: productName,  // Fix: Corrected property reference
+      quantity: parseInt(productQuantity),
+      amount: parseFloat(productPrice)
+  };
+
+  console.log("Cart Item:", cartItem); // Debugging: Log the cart item
+
+  fetch('/add-to-cart', {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(cartItem),
+  })
+  .then(response => response.json())
+  .then(data => {
+      if (data.success) {
+          console.log("Item added to cart:", data.cart); // Debugging: Log the updated cart
+          updateCartUI(data.cart);
+          calculateCartTotal();
+      } else {
+          alert('Failed to add item to cart');
+      }
+  })
+  .catch(error => {
+      console.error('Error:', error);
+  });
 }
+
 
 
 
@@ -448,8 +497,162 @@ document.getElementById('logout-btn').addEventListener('click', function() {
   window.location.href = '/logout';  // This will trigger the Flask logout route
 });
 
-document.getElementById('check-out').addEventListener('click', function() {
-  window.location.href = '/checkout';  // This will trigger the Flask logout route
+document.getElementById('check-out').addEventListener('click', async function() {
+    try {
+        // Get cart items from localStorage
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        
+        // Prepare data for checkout
+        const cartData = cart.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity,
+            price: parseFloat(item.price.replace('₹', '')) // Ensure price is a number
+        }));
+
+        // Send checkout request
+        const response = await fetch('/checkout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ cart_items: cartData })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Redirect to payment page with transaction ID
+            window.location.href = `/payment?transaction_id=${data.transaction_id}`;
+        } else {
+            alert('Checkout failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Checkout error:', error);
+        alert('Checkout failed. Please try again.');
+    }
+});
+
+document.getElementById('payBtn').onclick = async function () {
+    try {
+        // Get transaction_id from URL
+        const transactionId = new URLSearchParams(window.location.search).get('transaction_id');
+        if (!transactionId) {
+            throw new Error('Transaction ID not found');
+        }
+
+        // Create order with transaction_id
+        const res = await fetch('/create_order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transaction_id: transactionId })
+        });
+
+        const order = await res.json();
+
+        if (!res.ok) {
+            throw new Error(order.error || 'Failed to create order');
+        }
+
+        // Open Razorpay payment window
+        const options = {
+            "key": "rzp_test_3UulXQvQM07Hh2", // Your Razorpay key
+            "amount": order.amount,
+            "currency": order.currency,
+            "order_id": order.id,
+            "handler": function (response) {
+                fetch('/payment_verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...response,
+                        transaction_id: transactionId
+                    })
+                }).then(res => res.json())
+                  .then(data => {
+                    if (data.status === 'success') {
+                        window.location.href = '/order_success';
+                    } else {
+                        alert('Payment verification failed');
+                    }
+                  });
+            }
+        };
+
+        const rzp1 = new Razorpay(options);
+        rzp1.open();
+    } catch (error) {
+        console.error('Payment error:', error);
+        alert('Payment failed: ' + error.message);
+    }
+};
+
+function updateCartTotal(totalAmount) {
+    // Select the total amount element
+    const totalAmountElement = document.querySelector('.total-amount');
+    
+    // Update the total amount displayed
+    totalAmountElement.textContent = `₹${totalAmount}`;
+}
+
+// Example usage:
+// When an item is added to the cart, calculate the total and update the UI
+function addToCart(productId, price) {
+    // Add the product to the cart (logic here)
+    
+    // Calculate the new total
+    const newTotal = calculateCartTotal(); // Assume this function calculates the total
+    
+    // Update the UI
+    updateCartTotal(newTotal);
+}
+
+function initSwiper() {
+    const swiper = new Swiper('.swiper', {
+        // Swiper configuration options
+        loop: true,
+        pagination: {
+            el: '.swiper-pagination',
+        },
+        navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+        },
+    });
+}
+
+function calculateCartTotal() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    document.querySelector('.total-amount').textContent = `₹${totalAmount.toFixed(2)}`;
+}
+
+function initProductQty() {
+    document.querySelectorAll('.product-qty').forEach(qty => {
+        const input = qty.querySelector('.input-number');
+        const minusBtn = qty.querySelector('.quantity-left-minus');
+        const plusBtn = qty.querySelector('.quantity-right-plus');
+
+        minusBtn.addEventListener('click', () => {
+            let value = parseInt(input.value);
+            if (value > 1) {
+                input.value = value - 1;
+            }
+        });
+
+        plusBtn.addEventListener('click', () => {
+            let value = parseInt(input.value);
+            input.value = value + 1;
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const element = document.getElementById('your-element-id');
+    if (element) {
+        // Your code here
+    } else {
+        console.error("Element not found: #your-element-id");
+    }
 });
 
 

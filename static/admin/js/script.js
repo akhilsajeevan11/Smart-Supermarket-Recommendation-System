@@ -15,12 +15,16 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     // Handle user form submission
-    document.getElementById("content").addEventListener("submit", function(event) {
-        if (event.target.id === "userForm") {
+    const userForm = document.getElementById("userForm");
+    if (userForm) {
+        userForm.addEventListener("submit", function(event) {
             event.preventDefault();
+            console.log("Form submitted");  // Debugging
             createUser();
-        }
-    });
+        });
+    } else {
+        console.error("Form with ID 'userForm' not found");  // Debugging
+    }
 });
 
 function showSection(sectionId) {
@@ -35,17 +39,18 @@ function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('active');
 }
 
-
-
 // usermanagment script
-
 async function createUser() {
+    console.log("createUser function called");  // Debugging
+    
     const userData = {
         username: document.getElementById("username").value,
         email: document.getElementById("email").value,
         password: document.getElementById("password").value,
         role: document.getElementById("role").value
     };
+
+    console.log("User data:", userData);  // Debugging
 
     try {
         const response = await fetch('/admin/create_user', {
@@ -61,7 +66,15 @@ async function createUser() {
         
         if (response.ok) {
             messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-            document.getElementById("userForm").reset();
+            // Clear form values
+            document.getElementById("username").value = "";
+            document.getElementById("email").value = "";
+            document.getElementById("password").value = "";
+            document.getElementById("role").value = "Manager";  // Reset to default role
+            // Refresh the page after 2 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
         } else {
             messageDiv.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
         }
