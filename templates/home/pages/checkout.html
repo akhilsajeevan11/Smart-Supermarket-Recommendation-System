@@ -230,6 +230,46 @@
                 alert('Checkout failed. Please try again.'); // Show error message
             });
         });
+
+        function proceedToCheckout() {
+            // Get cart items from localStorage
+            const cart = JSON.parse(localStorage.getItem("cart")) || [];
+            
+            // Prepare cart data for the backend
+            const cartItems = cart.map(item => ({
+                product_id: item.id, // Make sure your cart items have product_id
+                quantity: item.quantity,
+                price: item.price
+            }));
+
+            // Get customer email (you might need to get this from the session or form)
+            const customerEmail = "user@example.com"; // Replace with actual email
+
+            console.log("Cart Data Sent to Server:", cartItems);  // Debug print
+
+            // Send cart data to the checkout route
+            fetch('/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: customerEmail,
+                    cartItems: cartItems
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Checkout successful!');
+                    localStorage.removeItem("cart"); // Clear the cart after successful checkout
+                    window.location.href = '/'; // Redirect to home page
+                } else {
+                    alert('Checkout failed: ' + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
     </script>
 
 </body>

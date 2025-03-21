@@ -28,7 +28,7 @@ class Db:
             self.cursor = self.connection.cursor(dictionary=True)
             self.connection.autocommit = False  # Disable auto-commit
         except Error as err:
-            print(f"Database connection failed: {err}")
+            logging.error(f"Database connection failed: {err}")
             raise
 
     def commit(self):
@@ -37,6 +37,7 @@ class Db:
             self.connection.commit()
         except Error as err:
             self.connection.rollback()
+            logging.error(f"Commit failed: {err}")
             raise
 
     def rollback(self):
@@ -44,7 +45,7 @@ class Db:
         try:
             self.connection.rollback()
         except Error as err:
-            print(f"Rollback failed: {err}")
+            logging.error(f"Rollback failed: {err}")
             raise
 
     def execute(self, query, params=None):
@@ -54,6 +55,7 @@ class Db:
             return self.cursor.rowcount
         except Error as err:
             self.rollback()
+            logging.error(f"Query execution failed: {err}")
             raise
 
     def select(self, query, params=None):
@@ -62,6 +64,7 @@ class Db:
             self.cursor.execute(query, params or ())
             return self.cursor.fetchall()
         except Error as err:
+            logging.error(f"Select query failed: {err}")
             raise
 
     def selectOne(self, query, params=None):
@@ -70,6 +73,7 @@ class Db:
             self.cursor.execute(query, params or ())
             return self.cursor.fetchone()
         except Error as err:
+            logging.error(f"SelectOne query failed: {err}")
             raise
 
     def insert(self, query, values):
@@ -79,6 +83,7 @@ class Db:
             return self.cursor.lastrowid
         except Error as err:
             self.rollback()
+            logging.error(f"Insert query failed: {err}")
             raise
 
     def __enter__(self):

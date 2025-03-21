@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Payment</title>
+</head>
+<body>
+    <h1>Complete Your Payment</h1>
+    <p>Total Amount to Pay: ₹<span id="totalAmount"></span></p>
+    <button id="payBtn">Pay Now</button>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        // Get total_amount and transaction_id from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const totalAmount = urlParams.get('total_amount'); // Get total amount from query params
+        const transactionId = urlParams.get('transaction_id'); // Get transaction ID from query params
+
+        // Display total amount on the page
+        document.getElementById('totalAmount').textContent = totalAmount || '0';
+
+        document.getElementById('payBtn').onclick = async function () {
+            try {
+                if (!transactionId) {
+                    throw new Error('Transaction ID not found');
+                }
+
+                // Create order with transaction_id and total_amount
+                const res = await fetch('/create_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        transaction_id: transactionId,
+                        total_amount: totalAmount // Pass total amount to the backend
+                    })
+                });
+
+                const order = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(order.error || 'Failed to create order');
+                }
+
+                // Razorpay payment options
+                const options = {
+                    "key": "rzp_test_3UulXQvQM07Hh2", // Your Razorpay key
+                    "amount": order.amount, // Amount in paise
+                    "currency": order.currency,
+                    "order_id": order.id,
+                    "handler": function (response) {
+                        // Verify payment
+                        fetch('/payment_verification', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ...response,
+                                transaction_id: transactionId
+                            })
+                        }).then(res => res.json())
+                          .then(data => {
+                            if (data.status === 'success') {
+                                window.location.href = '/order_success';
+                            } else {
+                                alert('Payment verification failed');
+                            }
+                          });
+                    }
+                };
+
+                // Open Razorpay payment window
+                const rzp1 = new Razorpay(options);
+                rzp1.open();
+            } catch (error) {
+                console.error('Payment error:', error);
+                alert('Payment failed: ' + error.message);
+            }
+        };
+    </script>
+</body>
+</html>

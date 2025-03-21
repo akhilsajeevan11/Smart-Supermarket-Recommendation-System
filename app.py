@@ -3,7 +3,7 @@ from db_connection import Db  # Import the Db class
 import os
 import bcrypt
 import re
-from mysql.connector import IntegrityError
+from mysql.connector import IntegrityError, Error
 import traceback
 from flask_socketio import SocketIO, emit
 import json
@@ -12,6 +12,14 @@ import logging
 from datetime import datetime
 from dotenv import load_dotenv
 import pickle
+
+
+
+
+import razorpay
+
+
+
 
 UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -33,8 +41,14 @@ def load_model(model_path):
 model = load_model(model_path)  # ✅ Load the model, not just the path
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+app.secret_key = os.getenv('SECRET_KEY') 
 socketio = SocketIO(app)
+
+
+razorpay_client = razorpay.Client(auth=(
+    os.getenv('RAZORPAY_KEY_ID'),
+    os.getenv('RAZORPAY_KEY_SECRET')
+))
 
 logging.basicConfig(level=logging.INFO)
 
@@ -63,6 +77,7 @@ def login():
         print("Email received:", email)
         
         try:
+            # Validate email and password
             if not email or not password:
                 return jsonify({"success": False, "error": "Email and password required"}), 400
 
@@ -71,7 +86,7 @@ def login():
             redirect_url = url_for('home')
             if '@admin' in email:
                 role = 'Admin'
-                redirect_url = url_for('admin_home')  # Redirect to admin home
+                redirect_url = url_for('admin_home')
             elif '@staff' in email:
                 role = 'Staff'
                 redirect_url = url_for('staff')
@@ -96,7 +111,7 @@ def login():
                         'admin_id': admin['admin_id'],
                         'role': 'Admin'
                     })
-                    print("Admin login successful. Redirecting to:", redirect_url)  # Debugging
+                    print("Admin login successful. Redirecting to:", redirect_url)
                     return jsonify({
                         "success": True,
                         "redirect": redirect_url
@@ -144,6 +159,8 @@ def login():
                         if not customer:
                             db.insert("INSERT INTO Customer (user_id) VALUES (%s)", (user['user_id'],))
                             db.commit()
+                    
+                    session['customer_id'] = customer['customer_id']  # Set customer_id in session
                     
                     return jsonify({
                         "success": True,
@@ -219,6 +236,7 @@ def home():
             FROM Product
         """
         products = db.select(query)
+        print("Productssssss",products)
     
     # Categorize products based on their category
     categorized_products = {
@@ -236,11 +254,12 @@ def home():
     
     return render_template("/home/index.html", categorized_products=categorized_products)
 
-    # except Exception as e:
-    #     print(f"Error fetching products: {e}")
-    #     return "Error loading products", 500
-
-
+def get_category_name(category_id):
+    """Fetch category name from category_id."""
+    query = "SELECT category_name FROM Category WHERE category_id = %s"
+    with Db() as db:
+        result = db.selectOne(query, (category_id,))
+    return result["category_name"] if result else "Unknown"
 
 
 def validate_email(email):
@@ -310,22 +329,43 @@ def admin_users():
 
 @app.route('/admin/create_user', methods=['POST'])
 def create_user():
-    data = request.get_json()
-    print("Received data:", data)  # Debugging: Log the received data
+    # Debugging: Log the request headers
+    print("Request headers:", request.headers)
+    
+    # Debugging: Log the request content type
+    print("Content-Type:", request.content_type)
+    
+    # Debugging: Log the raw request data
+    raw_data = request.data
+    print("Raw request data:", raw_data)
+    
+    # Parse JSON data
+    try:
+        data = request.get_json()  # This is a Python dictionary, not a tuple
+        print("Received data:", data)  # Debugging: Log the received data
+    except Exception as e:
+        print("Error parsing JSON:", str(e))  # Debugging
+        return jsonify({"error": "Invalid JSON data"}), 400
+    
+    # Accessing fields from the dictionary
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    role = data.get('role')
     
     # Validation
-    if not all(key in data for key in ['username', 'email', 'password', 'role']):
+    if not all([username, email, password, role]):
         print("Validation failed: Missing required fields")  # Debugging
         return jsonify({"error": "Missing required fields"}), 400
     
-    if data['role'] not in ['Manager', 'Staff', 'Customer']:
+    if role not in ['Manager', 'Staff', 'Customer']:
         print("Validation failed: Invalid role")  # Debugging
         return jsonify({"error": "Invalid role"}), 400
     
     try:
         # Check if email already exists
         with Db() as db:
-            existing_user = db.selectOne("SELECT user_id FROM Users WHERE email = %s", (data['email'],))
+            existing_user = db.selectOne("SELECT user_id FROM Users WHERE email = %s", (email,))
             if existing_user:
                 print("Validation failed: Email already exists")  # Debugging
                 return jsonify({"error": "Email already exists"}), 400
@@ -335,28 +375,25 @@ def create_user():
         INSERT INTO Users (username, email, password, role)
         VALUES (%s, %s, %s, %s)
         """
-        user_values = (
-            data['username'],
-            data['email'],
-            data['password'],  # Store password as plain text
-            data['role']
-        )
+        user_values = (username, email, password, role)
         
         with Db() as db:
             user_id = db.insert(user_query, user_values)
             print("User created with ID:", user_id)  # Debugging
             
             # If the user is a manager or staff, insert into respective tables
-            if data['role'] == 'Manager':
+            if role == 'Manager':
                 manager_query = "INSERT INTO Manager (user_id) VALUES (%s)"
                 db.insert(manager_query, (user_id,))
                 print("Manager record created")  # Debugging
-            elif data['role'] == 'Staff':
+            elif role == 'Staff':
                 manager_id = get_default_manager_id()
+                if not manager_id:
+                    return jsonify({"error": "No manager found to assign staff"}), 400
                 staff_query = "INSERT INTO Staff (user_id, manager_id) VALUES (%s, %s)"
                 db.insert(staff_query, (user_id, manager_id))
                 print("Staff record created")  # Debugging
-            elif data['role'] == 'Customer':
+            elif role == 'Customer':
                 customer_query = "INSERT INTO Customer (user_id) VALUES (%s)"
                 db.insert(customer_query, (user_id,))
                 print("Customer record created")  # Debugging
@@ -365,11 +402,10 @@ def create_user():
             return jsonify({"message": "User created successfully"}), 201
     except Exception as e:
         print("Error occurred:", str(e))  # Debugging
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 def get_default_manager_id():
-    # Implement this function to get a default manager ID
-    # This could be the first manager in the system or a specific one
+    # Fetch the first manager ID from the Manager table
     with Db() as db:
         manager = db.selectOne("SELECT manager_id FROM Manager LIMIT 1")
         return manager['manager_id'] if manager else None
@@ -503,12 +539,7 @@ def staff():
 
 
 
-def get_category_name(category_id):
-    """Fetch category name from category_id."""
-    query = "SELECT category_name FROM Category WHERE category_id = %s"
-    with Db() as db:
-        result = db.selectOne(query, (category_id,))
-    return result["category_name"] if result else "Unknown"
+
 
 @app.route('/staff/products')
 def get_products():
@@ -746,92 +777,65 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route('/checkout', methods=['GET', 'POST'])
+@app.route('/checkout', methods=['POST'])
 def checkout():
-    if request.method == 'POST':
-        try:
-            # 🔹 Step 1: Retrieve JSON data from request
-            data = request.get_json()
-            customer_email = data.get('email')
+    try:
+        # Log session data for debugging
+        print("Session data:", session)
 
-            if not customer_email:
-                return jsonify({'status': 'error', 'message': 'Email is required!'}), 400
+        # Get customer_id from session
+        customer_id = session.get('customer_id')
+        if not customer_id:
+            return jsonify({"error": "Customer not logged in"}), 401  # Unauthorized
 
-            total_amount = 30.00  # You can dynamically calculate this from cart data
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
 
-            print(f"✅ Received Checkout Request for: {customer_email}")
+        cart_items = data.get('cart_items', [])
+        total_amount = data.get('total_amount', 0)
+        print("Cart items:", cart_items)  # Log cart items
+        print("Total amount:", total_amount)  # Log total amount
 
-            with Db() as db:
-                # 🔹 Step 2: Fetch Customer ID
-                customer_query = """
-                    SELECT customer_id FROM Customer 
-                    WHERE user_id = (SELECT user_id FROM Users WHERE email = %s)
-                """
-                customer = db.selectOne(customer_query, (customer_email,))
-                
-                if not customer:
-                    print("❌ Customer not found!")
-                    return jsonify({'status': 'error', 'message': 'Customer not found!'}), 404
+        if not cart_items:
+            return jsonify({"error": "Cart is empty"}), 400
 
-                customer_id = customer["customer_id"]
-                print(f"✅ Customer ID found: {customer_id}")
+        # Use the Db class to handle database operations
+        with Db() as db:
+            for item in cart_items:
+                product_id = item.get('product_id')
+                product_name = item.get('product_name')  # Optional: Log product name
+                quantity = item.get('quantity')
+                amount = item.get('amount')
 
-                # 🔹 Step 3: Insert Transaction
-                transaction_query = """
-                    INSERT INTO Transaction (customer_id, total_amount, payment_status, payment_method)
+                # Log each item for debugging
+                print("Processing item:", item)
+
+                # Validate required fields
+                if not product_id:
+                    return jsonify({"error": "Missing product_id in cart item"}), 400
+                if not quantity:
+                    return jsonify({"error": "Missing quantity in cart item"}), 400
+                if not amount:
+                    return jsonify({"error": "Missing amount in cart item"}), 400
+
+                # Log product name (optional)
+                if product_name:
+                    print(f"Processing product: {product_name}")
+
+                # Insert into Cart table
+                db.execute("""
+                    INSERT INTO Cart (customer_id, product_id, quantity, amount)
                     VALUES (%s, %s, %s, %s)
-                """
-                transaction_id = db.insert(transaction_query, (customer_id, total_amount, "Success", "Credit Card"))
+                """, (customer_id, product_id, quantity, amount))
 
-                if not transaction_id:
-                    print("❌ Transaction insertion failed!")
-                    return jsonify({'status': 'error', 'message': 'Transaction could not be created!'}), 500
+            db.commit()  # Commit the transaction
 
-                print(f"✅ Transaction Created: {transaction_id}")
-
-                # 🔹 Step 4: Insert Purchase Details for Each Product
-                cart_items = [
-                    {"product_id": 1, "quantity": 2, "price": 15},
-                    {"product_id": 2, "quantity": 1, "price": 5},
-                    {"product_id": 3, "quantity": 3, "price": 8}
-                ]  # Example cart items
-
-                for item in cart_items:
-                    sub_total = item["quantity"] * item["price"]
-                    purchase_query = """
-                        INSERT INTO PurchaseDetail (transaction_id, product_id, quantity, sub_total)
-                        VALUES (%s, %s, %s, %s)
-                    """
-                    db.insert(purchase_query, (transaction_id, item["product_id"], item["quantity"], sub_total))
-                    print(f"✅ Purchase Detail Added for Product {item['product_id']}")
-
-                    # 🔹 Step 5: Deduct from Product Stock
-                    update_stock_query = """
-                        UPDATE Product SET stock_quantity = stock_quantity - %s WHERE product_id = %s
-                    """
-                    db.execute(update_stock_query, (item["quantity"], item["product_id"]))
-                    print(f"✅ Stock Updated for Product {item['product_id']}")
-
-                # 🔹 Step 6: Insert Payment Record
-                payment_query = """
-                    INSERT INTO Payment (transaction_id, amount, payment_method, payment_status)
-                    VALUES (%s, %s, %s, %s)
-                """
-                db.insert(payment_query, (transaction_id, total_amount, "Credit Card", "Success"))
-                print(f"✅ Payment Recorded for Transaction {transaction_id}")
-
-                # 🔹 Step 7: Commit the transaction
-                db.commit()
-                print("✅ Database Transaction Committed!")
-
-                return jsonify({'status': 'success', 'message': 'Order placed successfully!'})
-
-        except Exception as e:
-            db.rollback()
-            print(f"❌ Checkout failed: {str(e)}")
-            return jsonify({'status': 'error', 'message': f"Checkout failed: {str(e)}"}), 500
-
-    return render_template('home/pages/checkout.html')
+        # Redirect to payment page with total amount as a query parameter
+        return redirect(f'/payment?total_amount={total_amount}')  # Pass total amount to payment page
+    except Exception as e:
+        print("Error during checkout:", e)
+        return jsonify({"error": "An error occurred during checkout"}), 500
 
 @app.route('/update_inventory_log/<int:product_id>', methods=['PUT'])
 def update_inventory_log(product_id):
@@ -907,6 +911,117 @@ def notify_staff():
     except Exception as e:
         print(f"Error inserting notification: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+
+@app.route('/create_order', methods=['POST'])
+def create_order():
+    try:
+        # Get JSON data from request
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Get transaction_id and total_amount from request
+        transaction_id = data.get('transaction_id')
+        total_amount = data.get('total_amount')
+        if not transaction_id or not total_amount:
+            return jsonify({'error': 'Transaction ID and total amount are required'}), 400
+
+        # Convert total amount to paise (Razorpay requires amount in paise)
+        amount = int(float(total_amount) * 100)
+
+        # Create Razorpay order
+        order = razorpay_client.order.create({
+            'amount': amount,
+            'currency': 'INR',
+            'payment_capture': 1
+        })
+
+        return jsonify(order), 200
+
+    except Exception as e:
+        print("Create Order Error:", str(e))
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/payment_verification', methods=['POST'])
+def payment_verification():
+    try:
+        # Get JSON data from request
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Verify required fields
+        required_fields = ['razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature', 'transaction_id']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # Verify payment signature
+        razorpay_client.utility.verify_payment_signature({
+            'razorpay_order_id': data['razorpay_order_id'],
+            'razorpay_payment_id': data['razorpay_payment_id'],
+            'razorpay_signature': data['razorpay_signature']
+        })
+
+        # Update transaction status
+        with Db() as db:
+            cursor = db.connection.cursor()
+            cursor.execute("""
+                UPDATE Transaction 
+                SET payment_status = 'Success'
+                WHERE transaction_id = %s
+            """, (data['transaction_id'],))
+            
+            # Insert into Payment table
+            cursor.execute("""
+                INSERT INTO Payment (transaction_id, amount, payment_method, payment_status)
+                SELECT transaction_id, total_amount, payment_method, 'Success'
+                FROM Transaction
+                WHERE transaction_id = %s
+            """, (data['transaction_id'],))
+            
+            db.connection.commit()
+
+        return jsonify({'status': 'success'}), 200
+
+    except Exception as e:
+        db.connection.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/payment', methods=['GET'])
+def payment():
+    total_amount = request.args.get('total_amount', 0)  # Get total amount from query parameters
+    return render_template('payment.html', total_amount=total_amount)  # Pass total amount to the template
+
+@app.route('/add-to-cart', methods=['POST'])
+def add_to_cart():
+    data = request.get_json()
+    product_id = data.get('product_id')
+    product_name = data.get('product_name')
+    quantity = data.get('quantity')
+    amount = data.get('amount')
+
+    if not product_id:
+        return jsonify({'success': False, 'message': 'Missing product_id'})
+
+    # Initialize cart if it doesn't exist
+    if 'cart' not in session:
+        session['cart'] = []
+
+    # Add item to cart
+    session['cart'].append({
+        'product_id': product_id,
+        'product_name': product_name,
+        'quantity': quantity,
+        'amount': amount
+    })
+
+    # Debug: Print session cart
+    print("Session cart after adding item:", session['cart'])
+
+    return jsonify({'success': True, 'cart': session['cart']})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
