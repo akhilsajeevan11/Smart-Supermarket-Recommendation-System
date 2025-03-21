@@ -172,6 +172,7 @@ document.addEventListener("DOMContentLoaded", function () {
       event.preventDefault();
 
       const productItem = this.closest(".product-item");
+      const productId = productItem.getAttribute("data-product-id");
       const productName = productItem.querySelector("h3").innerText;
       const productPrice = parseFloat(
         productItem.querySelector(".price").innerText.replace("₹", "")
@@ -181,14 +182,14 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
       const cartItem = {
+        product_id:productId,
         name: productName,
         price: productPrice,
         quantity: productQty,
       };
 
       let cart = JSON.parse(localStorage.getItem("cart")) || [];
-      let existingItem = cart.find((item) => item.name === cartItem.name);
-
+      let existingItem = cart.find((item) => item.product_id === cartItem.product_id);
       if (existingItem) {
         existingItem.quantity += cartItem.quantity;
       } else {
@@ -506,8 +507,9 @@ document.getElementById('check-out').addEventListener('click', async function() 
         const cartData = cart.map(item => ({
             product_id: item.id,
             quantity: item.quantity,
-            price: parseFloat(item.price.replace('₹', '')) // Ensure price is a number
+            price: item.price // Ensure price is a number
         }));
+        // console.log(item.price, typeof item.price)
 
         // Send checkout request
         const response = await fetch('/checkout', {
