@@ -12,6 +12,7 @@ import logging
 from datetime import datetime
 from dotenv import load_dotenv
 import pickle
+import uuid
 
 
 
@@ -236,7 +237,7 @@ def home():
             FROM Product
         """
         products = db.select(query)
-        print("Productssssss",products)
+        # print("Productssssss",products)
     
     # Categorize products based on their category
     categorized_products = {
@@ -786,7 +787,7 @@ def checkout():
         # Get customer_id from session
         customer_id = session.get('customer_id')
         if not customer_id:
-            return jsonify({"error": "Customer not logged in"}), 401  # Unauthorized
+            return jsonify({"error": "Customer not logged in"}), 401
 
         data = request.get_json()
         if not data:
@@ -794,45 +795,18 @@ def checkout():
 
         cart_items = data.get('cart_items', [])
         total_amount = data.get('total_amount', 0)
-        print("Cart items:", cart_items)  # Log cart items
-        print("Total amount:", total_amount)  # Log total amount
+        print("Cart items:", cart_items)
+        print("Total amount:", total_amount)
 
         if not cart_items:
             return jsonify({"error": "Cart is empty"}), 400
 
-        # Use the Db class to handle database operations
-        with Db() as db:
-            for item in cart_items:
-                product_id = item.get('product_id')
-                product_name = item.get('product_name')  # Optional: Log product name
-                quantity = item.get('quantity')
-                amount = item.get('amount')
+        # Store cart items in session for later use
+        session['cart_items'] = cart_items
+        session['total_amount'] = total_amount
 
-                # Log each item for debugging
-                print("Processing item:", item)
-
-                # Validate required fields
-                if not product_id:
-                    return jsonify({"error": "Missing product_id in cart item"}), 400
-                if not quantity:
-                    return jsonify({"error": "Missing quantity in cart item"}), 400
-                if not amount:
-                    return jsonify({"error": "Missing amount in cart item"}), 400
-
-                # Log product name (optional)
-                if product_name:
-                    print(f"Processing product: {product_name}")
-
-                # Insert into Cart table
-                db.execute("""
-                    INSERT INTO Cart (customer_id, product_id, quantity, amount)
-                    VALUES (%s, %s, %s, %s)
-                """, (customer_id, product_id, quantity, amount))
-
-            db.commit()  # Commit the transaction
-
-        # Redirect to payment page with total amount as a query parameter
-        return redirect(f'/payment?total_amount={total_amount}')  # Pass total amount to payment page
+        # Redirect to payment page with total_amount
+        return redirect(f'/payment?total_amount={total_amount}')
     except Exception as e:
         print("Error during checkout:", e)
         return jsonify({"error": "An error occurred during checkout"}), 500
@@ -993,7 +967,7 @@ def payment_verification():
 @app.route('/payment', methods=['GET'])
 def payment():
     total_amount = request.args.get('total_amount', 0)  # Get total amount from query parameters
-    return render_template('payment.html', total_amount=total_amount)  # Pass total amount to the template
+    return render_template('payment/payment.html', total_amount=total_amount)  # Pass total amount to the template
 
 @app.route('/add-to-cart', methods=['POST'])
 def add_to_cart():
