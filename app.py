@@ -53,8 +53,8 @@ Session(app)
 
 
 # ✅ Define Paths
-PRODUCTS_PATH = "/home/alignminds/Desktop/Akhil/Project/Smart Supermarket Recommendation System/Data_set/products.csv"
-ORDERS_PATH = "/home/alignminds/Desktop/Akhil/Project/Smart Supermarket Recommendation System/Data_set/orders.csv"
+PRODUCTS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/products.csv"
+ORDERS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/orders.csv"
 PICKLE_PATH = "/home/alignminds/Desktop/Akhil/Project/Model/recommendation_system.pkl"
 
 
