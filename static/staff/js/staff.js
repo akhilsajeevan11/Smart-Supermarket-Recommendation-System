@@ -1,6 +1,9 @@
 // Initialize Socket.IO
 const socket = io();
 
+// Store notifications in a global array
+let notifications = [];
+
 document.addEventListener("DOMContentLoaded", function () {
     fetchProducts(); // Fetch products when page loads
     socket.on("new_product", (product) => addProductToUI(product));  // Listen for real-time updates
@@ -117,18 +120,7 @@ function removeProductFromUI(product_id) {
     updateProductList();
 }
 
-// Check for low stock products and show alert
-function checkLowStock() {
-    let lowStockProducts = window.products.filter(product => product.stock < 5);
-    let alertBox = document.getElementById("low-stock-alert");
 
-    if (lowStockProducts.length > 0) {
-        alertBox.classList.remove("d-none");
-        alertBox.innerText = "Low stock on: " + lowStockProducts.map(p => `${p.name} (${p.stock})`).join(", ");
-    } else {
-        alertBox.classList.add("d-none");
-    }
-}
 
 // Get staff ID from session
 function getStaffId() {
@@ -152,27 +144,41 @@ function previewImage(event) {
 
 // Toggle notifications dropdown
 function toggleNotifications() {
-    let dialog = document.getElementById("notification-dialog");
+    const dialog = document.getElementById("notification-dialog");
+    const notificationList = document.getElementById("notification-list");
+
+    // Update the notification list when the dropdown is opened
+    if (dialog.style.display === "none" || dialog.style.display === "") {
+        // Clear the list
+        notificationList.innerHTML = "";
+
+        // Add all notifications to the list
+        if (notifications.length > 0) {
+            notifications.forEach(notification => {
+                const notificationItem = document.createElement("li");
+                notificationItem.className = "list-group-item";
+                notificationItem.textContent = notification.message;
+                notificationList.appendChild(notificationItem);
+            });
+        } else {
+            // Show "No notifications" message
+            const noNotificationItem = document.createElement("li");
+            noNotificationItem.className = "list-group-item text-muted";
+            noNotificationItem.textContent = "No notifications";
+            notificationList.appendChild(noNotificationItem);
+        }
+    }
+
+    // Toggle the dropdown visibility
     dialog.style.display = dialog.style.display === "none" || dialog.style.display === "" ? "block" : "none";
 }
 
 // Handle new notifications
 function handleNewNotification(data) {
-    const notificationList = document.getElementById("notification-list");
     const notificationBadge = document.getElementById("notification-badge");
 
-    // Create a new notification item
-    const notificationItem = document.createElement("li");
-    notificationItem.className = "list-group-item";
-    notificationItem.textContent = data.message;
-
-    // Remove the "No notifications" message if it exists
-    if (notificationList.firstElementChild?.classList.contains("text-muted")) {
-        notificationList.removeChild(notificationList.firstElementChild);
-    }
-
-    // Add the new notification to the top of the list
-    notificationList.insertBefore(notificationItem, notificationList.firstChild);
+    // Add the new notification to the list
+    notifications.unshift(data); // Add to the beginning of the array
 
     // Update the notification badge
     const currentCount = parseInt(notificationBadge.textContent) || 0;

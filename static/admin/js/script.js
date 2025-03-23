@@ -1,6 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
     console.log("✅ DOM Loaded - Fetching sales data...");
     fetchSalesData();
+
+    // Attach form submission event
+    const userForm = document.getElementById('userForm');
+    if (userForm) {
+        userForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            createUser();
+        });
+    }
 });
 
 // Fetch Sales Data
@@ -61,7 +70,6 @@ function renderSalesChart(labels, salesValues) {
     console.log("✅ Chart Rendered Successfully!");
 }
 
-
 // Show Section Function (Sidebar Navigation)
 function showSection(sectionId) {
     document.querySelectorAll('.content > div').forEach(div => div.style.display = 'none');
@@ -81,7 +89,6 @@ function showSection(sectionId) {
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('active');
 }
-
 
 // ✅ User Management - Create User Function
 async function createUser() {
@@ -119,7 +126,7 @@ async function createUser() {
                 window.location.reload();
             }, 2000);
         } else {
-            messageDiv.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+            messageDiv.innerHTML = `<div class="alert alert-danger">${result.error || 'Failed to create user'}</div>`;
         }
     } catch (error) {
         console.error('Error:', error);
