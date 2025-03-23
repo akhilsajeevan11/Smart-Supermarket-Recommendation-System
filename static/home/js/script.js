@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
   initCart();
   initProductQty();
   initCheckout();
+
 });
 
 // ✅ Preloader Initialization
@@ -304,3 +305,13 @@ function proceedToCheckout() {
 document.addEventListener("DOMContentLoaded", function () {
   updateCartUI();
 });
+
+
+function closeWishlistPopup() {
+  let wishlistPopup = document.getElementById("wishlist-popup");
+  if (wishlistPopup) {
+    wishlistPopup.style.display = "none";
+  } else {
+    console.error("❌ Wishlist popup element not found!");
+  }
+}

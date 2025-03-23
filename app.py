@@ -49,6 +49,7 @@ socketio = SocketIO(app)
 
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_COOKIE_NAME"] = "user_session"
 Session(app)
 
 
@@ -276,10 +277,16 @@ def login():
 
                 # Validate credentials for all users
                 if user and user['password'] == password:
+                    session.clear() 
                     session.update({
                         'user_id': user['user_id'],
                         'role': user['role']
                     })
+
+                    # ✅ Clear and initialize cart for new login session
+                    session['cart_items'] = []
+                    session['total_amount'] = 0
+                    session.modified = True 
                     
                     # For customers, ensure Customer record exists
                     if user['role'] == 'Customer':
@@ -321,19 +328,47 @@ def login():
 
 
 
+@app.route('/sales_data', methods=['GET'])
+def get_sales_data():
+    try:
+        query = """
+        SELECT p.product_name, s.total_sales
+        FROM SalesAnalytics s
+        JOIN Product p ON s.product_id = p.product_id
+        ORDER BY s.total_sales DESC
+        """
+
+        with Db() as db:
+            cursor = db.connection.cursor(dictionary=True)
+            cursor.execute(query)
+            sales_data = cursor.fetchall()
+
+        return jsonify({"success": True, "sales_data": sales_data})
+
+    except Exception as e:
+        print(f"❌ Error fetching sales data: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+ 
 
 
-# ✅ API Endpoint: Get Similar Products
+
+
+
+
 @app.route('/similar_products', methods=['POST'])
 def similar_products():
     try:
         data = request.get_json()
         product_name = data.get("product_name")
+        customer_id = session.get("customer_id")  # Get customer from session
         print(f"📩 Received request for similar products: {product_name}")
 
         if not product_name:
             return jsonify({"success": False, "message": "Product name is required"}), 400
+        if not customer_id:
+            return jsonify({"success": False, "message": "Customer not logged in"}), 401
 
+        # ✅ Fetch Similar Products
         similar_items = find_similar_products(product_name, top_n=5)
 
         if similar_items.empty:
@@ -341,12 +376,67 @@ def similar_products():
             return jsonify({"success": False, "message": "No similar products found"}), 404
 
         print(f"✅ Similar products found: {similar_items.to_dict(orient='records')}")
+
+        with Db() as db:
+            cursor = db.connection.cursor(dictionary=True)
+
+            valid_product_ids = []
+            missing_products = []  # Track missing products
+
+            for _, row in similar_items.iterrows():
+                cursor.execute("SELECT product_id FROM Product WHERE product_id = %s", (row["product_id"],))
+                product_exists = cursor.fetchone()
+
+                if product_exists:
+                    valid_product_ids.append(row["product_id"])
+                else:
+                    missing_products.append(row)
+
+            # ✅ Ensure a valid category exists before inserting missing products
+            for product in missing_products:
+                category_id = 1  # Default category
+
+                # 🔍 Check if the category exists
+                cursor.execute("SELECT category_id FROM Category WHERE category_id = %s", (category_id,))
+                category_exists = cursor.fetchone()
+
+                if not category_exists:
+                    print(f"⚠️ Category {category_id} does not exist, inserting default category...")
+                    cursor.execute("""
+                        INSERT INTO Category (category_id, category_name)
+                        VALUES (%s, %s)
+                    """, (category_id, "General"))
+                    db.connection.commit()
+                    print(f"✅ Inserted missing category with ID {category_id}")
+
+                # 🔴 Insert product now that category exists
+                cursor.execute("""
+                    INSERT INTO Product (product_id, product_name, category_id, price, stock_quantity)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (product["product_id"], product["product_name"], category_id, 0.0, 0))
+
+                valid_product_ids.append(product["product_id"])
+                print(f"✅ Inserted missing product: {product['product_name']} (ID: {product['product_id']})")
+
+            # ✅ Insert Recommendations
+            for product_id in valid_product_ids:
+                cursor.execute("""
+                    INSERT INTO Recommendation (customer_id, product_id, recommendation_type)
+                    VALUES (%s, %s, 'Collaborative')
+                """, (customer_id, product_id))
+
+            db.connection.commit()
+            print("✅ Recommendations inserted successfully!")
+
         return jsonify({"success": True, "similar_products": similar_items.to_dict(orient="records")})
 
     except Exception as e:
         print(f"❌ Error in /similar_products: {str(e)}")
         traceback.print_exc()
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+
 
 # ✅ API Endpoint: Get Complementary Products
 @app.route('/complementary_products', methods=['POST'])
@@ -981,6 +1071,135 @@ def logout():
     return redirect(url_for('login'))
 
 
+
+
+
+
+@app.route('/sales_analytics', methods=['GET'])
+def get_sales_analytics():
+    try:
+        with Db() as db:
+            cursor = db.connection.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT p.product_name, s.total_sales, s.revenue, s.last_sold_date
+                FROM SalesAnalytics s
+                JOIN Product p ON s.product_id = p.product_id
+                ORDER BY s.total_sales DESC
+                LIMIT 10
+            """)
+            sales_data = cursor.fetchall()
+
+        return jsonify({"success": True, "sales_data": sales_data})
+
+    except Exception as e:
+        print(f"❌ Error fetching sales analytics: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/future_demand')
+def future_demand():
+    try:
+        query = """
+        SELECT r.product_id, p.product_name
+        FROM Recommendation r
+        JOIN Product p ON r.product_id = p.product_id
+        WHERE r.recommendation_type = 'Collaborative'
+        GROUP BY r.product_id, p.product_name;
+        """  # No demand_score, just fetch trending products
+
+        with Db() as db:
+            data = db.select(query)
+            
+        return jsonify({"success": True, "future_demand": data})
+    
+    except Exception as e:
+        print(f"❌ Future Demand Fetch Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+
+@app.route('/customer_preferences', methods=['GET'])
+def customer_preferences():
+    try:
+        query = """
+        SELECT p.product_name, SUM(c.quantity) as total_quantity
+        FROM Cart c
+        JOIN Product p ON c.product_id = p.product_id
+        GROUP BY p.product_name
+        ORDER BY total_quantity DESC
+        LIMIT 5  -- Get Top 5 preferred products
+        """
+
+        # ✅ Use Db() context manager
+        with Db() as db:
+            preferences = db.select(query)  # ✅ Assuming 'select()' method exists in Db class
+
+        return jsonify({"success": True, "customer_preferences": preferences})  # ✅ Direct return
+
+    except Exception as e:
+        print(f"❌ Customer Preferences Fetch Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+
+
+
+
+def update_sales_analytics(transaction_id):
+    try:
+        with Db() as db:
+            cursor = db.connection.cursor()
+
+            # 🔍 Get all purchased products for this transaction
+            cursor.execute("""
+                SELECT product_id, quantity, sub_total
+                FROM PurchaseDetail
+                WHERE transaction_id = %s
+            """, (transaction_id,))
+            purchases = cursor.fetchall()
+
+            if not purchases:
+                print(f"⚠️ No purchase details found for transaction {transaction_id}")
+                return
+
+            for item in purchases:
+                product_id, quantity, sub_total = item
+
+                # ✅ Check if product exists in SalesAnalytics
+                cursor.execute("""
+                    SELECT total_sales, revenue FROM SalesAnalytics WHERE product_id = %s
+                """, (product_id,))
+                analytics_entry = cursor.fetchone()
+
+                if analytics_entry:
+                    # 🔄 Update existing record
+                    total_sales = analytics_entry[0] + quantity
+                    revenue = analytics_entry[1] + sub_total
+
+                    cursor.execute("""
+                        UPDATE SalesAnalytics
+                        SET total_sales = %s, revenue = %s, last_sold_date = NOW()
+                        WHERE product_id = %s
+                    """, (total_sales, revenue, product_id))
+                    print(f"✅ Updated SalesAnalytics for product {product_id}")
+
+                else:
+                    # ➕ Insert new record
+                    cursor.execute("""
+                        INSERT INTO SalesAnalytics (product_id, total_sales, revenue, last_sold_date)
+                        VALUES (%s, %s, %s, NOW())
+                    """, (product_id, quantity, sub_total))
+                    print(f"✅ Inserted new SalesAnalytics for product {product_id}")
+
+            db.connection.commit()
+            print("✅ Sales analytics updated successfully!")
+
+    except Exception as e:
+        print(f"❌ Error updating sales analytics: {str(e)}")
+
+
 @app.route('/checkout', methods=['POST'])
 def checkout():
     try:
@@ -1021,9 +1240,10 @@ def checkout():
 
         print("✅ Updated session data:", dict(session))  # Debugging
 
-        # ✅ Create a transaction entry
         with Db() as db:
             cursor = db.connection.cursor()
+
+            # ✅ Create a transaction entry
             cursor.execute("""
                 INSERT INTO Transaction (customer_id, total_amount, payment_status, payment_method)
                 VALUES (%s, %s, 'Pending', 'UPI')
@@ -1032,7 +1252,19 @@ def checkout():
             transaction_id = cursor.lastrowid  # Get the inserted transaction ID
             db.connection.commit()
 
+            # ✅ Insert purchase details
+            for item in cart_items:
+                cursor.execute("""
+                    INSERT INTO PurchaseDetail (transaction_id, product_id, quantity, sub_total)
+                    VALUES (%s, %s, %s, %s)
+                """, (transaction_id, item["product_id"], item["quantity"], item["amount"] * item["quantity"]))
+
+            db.connection.commit()
+
         print(f"🔗 Proceeding to payment: transaction_id={transaction_id}, total_amount={total_amount}")
+
+        # ✅ Update Sales Analytics
+        update_sales_analytics(transaction_id)
 
         return jsonify({"transaction_id": transaction_id, "total_amount": total_amount})
 
@@ -1122,7 +1354,6 @@ def notify_staff():
         print(f"Error inserting notification: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
     
-
 @app.route('/create_order', methods=['POST'])
 def create_order():
     try:
@@ -1143,7 +1374,7 @@ def create_order():
         amount = int(float(total_amount) * 100)  # Convert to paise
 
         with Db() as db:
-            cursor = db.connection.cursor()
+            cursor = db.connection.cursor(dictionary=True)  # ✅ Ensure dictionary output
 
             # ✅ Check if an existing transaction exists for this customer and amount
             cursor.execute("""
@@ -1155,8 +1386,12 @@ def create_order():
             existing_transaction = cursor.fetchone()
 
             if existing_transaction:
-                transaction_id = existing_transaction["transaction_id"]
-                print(f"✅ Existing transaction found: {transaction_id}")
+                # ✅ Ensure data is retrieved as a dictionary
+                if isinstance(existing_transaction, dict):
+                    transaction_id = existing_transaction["transaction_id"]
+                    print(f"✅ Existing transaction found: {transaction_id}")
+                else:
+                    return jsonify({'error': 'Database response format error'}), 500
 
             else:
                 # ✅ Create new transaction if not exists
@@ -1185,7 +1420,7 @@ def create_order():
         print("❌ Create Order Error:", str(e))
         return jsonify({'error': str(e)}), 500
 
-    
+
 @app.route('/payment_verification', methods=['POST'])
 def payment_verification():
     try:
@@ -1213,7 +1448,7 @@ def payment_verification():
             return jsonify({'error': 'Signature verification failed'}), 400
 
         with Db() as db:
-            cursor = db.connection.cursor()
+            cursor = db.connection.cursor(dictionary=True)  # ✅ Ensure dictionary output
 
             # ✅ Ensure transaction exists and is not already marked as Success
             cursor.execute("SELECT payment_status FROM Transaction WHERE transaction_id = %s", (transaction_id,))
@@ -1222,7 +1457,7 @@ def payment_verification():
             if not transaction:
                 return jsonify({'error': 'Invalid transaction ID'}), 400
 
-            if transaction["payment_status"] == "Success":
+            if transaction["payment_status"] == "Success":  # ✅ Use dictionary key
                 return jsonify({'message': 'Payment already verified', 'transaction_id': transaction_id}), 200
 
             # ✅ Update existing transaction status
@@ -1247,7 +1482,6 @@ def payment_verification():
     except Exception as e:
         print(f"❌ Payment Verification Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
 
 
 
@@ -1305,6 +1539,8 @@ def add_to_cart():
     except Exception as e:
         print(f"🚨 Error adding to cart: {str(e)}")
         return jsonify({"success": False, "error": "Internal Server Error"}), 500
+
+    
 
     
 
