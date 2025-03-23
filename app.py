@@ -726,19 +726,19 @@ def handle_notify_staff(data):
 
 @app.route('/manager')
 def manager():
-    # if 'manager_id' not in session:  # Check if manager is logged in
-    #     return redirect(url_for('login'))
-
-    if 'user_id' not in session or session.get('role') != 'Manager':
-        print("Unauthorized access to /staff. Redirecting to login.")  # Debugging
+    if 'manager_id' not in session:  # Check if manager is logged in
         return redirect(url_for('login'))
+
+    # if 'user_id' not in session or session.get('role') != 'Manager':
+    #     print("Unauthorized access to /manager. Redirecting to login.")  # Debugging
+    #     return redirect(url_for('login'))
 
     try:
         # Fetch products with stock quantity below 10
         low_stock_query = """
         SELECT product_id, product_name, stock_quantity
         FROM Product
-        WHERE stock_quantity < 10
+        WHERE stock_quantity < 10 AND stock_quantity > 0
         """
         with Db() as db:
             low_stock_products = db.select(low_stock_query)
