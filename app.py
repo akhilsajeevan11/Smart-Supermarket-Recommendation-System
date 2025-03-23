@@ -52,12 +52,10 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 
-# ✅ Define Paths
-PRODUCTS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/products.csv"
-ORDERS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/orders.csv"
-PICKLE_PATH = "/home/alignminds/Desktop/Akhil/Project/Model/recommendation_system.pkl"
 
-
+PRODUCTS_PATH = os.getenv("PRODUCTS_PATH")
+ORDERS_PATH = os.getenv("ORDERS_PATH")
+PICKLE_PATH = os.getenv("PICKLE_PATH")
 
 
 
