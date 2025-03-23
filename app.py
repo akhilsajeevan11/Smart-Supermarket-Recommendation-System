@@ -726,7 +726,11 @@ def handle_notify_staff(data):
 
 @app.route('/manager')
 def manager():
-    if 'manager_id' not in session:  # Check if manager is logged in
+    # if 'manager_id' not in session:  # Check if manager is logged in
+    #     return redirect(url_for('login'))
+
+    if 'user_id' not in session or session.get('role') != 'Manager':
+        print("Unauthorized access to /staff. Redirecting to login.")  # Debugging
         return redirect(url_for('login'))
 
     try:

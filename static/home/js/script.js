@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", function () {
   initPreloader();
+  initWishlist()
   initSwipers();
-  // initWishlist();
   initCart();
-  initProductQty();
+  // initProductQty();
   initCheckout();
 
 });
@@ -21,14 +21,21 @@ function initPreloader() {
 
 // ✅ Initialize Swiper Sliders Efficiently
 function initSwipers() {
-  const categories = ["frozen", "bakery", "dairy-eggs", "beverages", "newly-arrived"];
+  const categories = [
+    { id: "frozen", carouselClass: "products-carousel" },
+    { id: "bakery", carouselClass: "products-carousel" },
+    { id: "dairy-eggs", carouselClass: "products-carousel" },
+    { id: "beverages", carouselClass: "products-carousel" },
+    { id: "newly-arrived", carouselClass: "brand-carousel" }
+  ];
+
   categories.forEach(category => {
-      new Swiper(`#${category} .products-carousel`, {
+      new Swiper(`#${category.id} .${category.carouselClass}`, {
           slidesPerView: 1,
           spaceBetween: 10,
           navigation: {
-              nextEl: `#${category} .products-carousel-next`,
-              prevEl: `#${category} .products-carousel-prev`,
+              nextEl: `#${category.id} .${category.carouselClass}-next`,
+              prevEl: `#${category.id} .${category.carouselClass}-prev`,
           },
           loop: true,
           autoplay: { delay: 3000, disableOnInteraction: false },
@@ -42,6 +49,8 @@ function initSwipers() {
   });
 }
 
+
+
 // ✅ Wishlist Management
 function initWishlist() {
   document.querySelectorAll(".wishlist-btn").forEach(button => {
@@ -49,8 +58,13 @@ function initWishlist() {
   });
 
   document.getElementById("wishlist-popup-close")?.addEventListener("click", closeWishlistPopup);
+
+  // Add this line to make the wishlist button open the modal
+  document.getElementById("wishlist-btn")?.addEventListener("click", () => displayWishlist(true));
+
   displayWishlist(false);
 }
+
 
 function getWishlist() {
   return JSON.parse(localStorage.getItem("wishlist")) || [];
@@ -59,6 +73,7 @@ function getWishlist() {
 function displayWishlist(triggeredByUser = false) {
   let wishlist = getWishlist();
   let wishlistContainer = document.getElementById("wishlist-popup-content");
+  console.log("displayWishlist called. Triggered by user:", triggeredByUser);
 
   if (!wishlistContainer) return;
   wishlistContainer.innerHTML = wishlist.length ? "" : "<p>Your wishlist is empty.</p>";
@@ -82,7 +97,7 @@ function addToWishlist(event) {
   let product = event.target.closest(".product-item");
   if (!product) return;
 
-  let title = product.querySelector(".title")?.innerText;
+  let title = product.querySelector("h3")?.innerText;
   let price = parseFloat(product.querySelector(".price")?.innerText.replace("₹", "")) || 0;
   let image = product.querySelector("img")?.src;
   let wishlist = getWishlist();
@@ -106,10 +121,12 @@ function removeFromWishlist(title) {
 
 function showWishlistPopup() {
   document.getElementById("wishlist-popup").style.display = "block";
+  document.getElementById("wishlist-popup").classList.add("show");
 }
 
 function closeWishlistPopup() {
   document.getElementById("wishlist-popup").style.display = "none";
+  document.getElementById("wishlist-popup").classList.remove("show");
 }
 
 // ✅ Cart Management
@@ -315,3 +332,22 @@ function closeWishlistPopup() {
     console.error("❌ Wishlist popup element not found!");
   }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const profileBtn = document.getElementById('profile-btn');
+  const logoutContainer = document.getElementById('logout-container');
+
+  profileBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    logoutContainer.style.display = logoutContainer.style.display === 'block' ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', () => {
+    logoutContainer.style.display = 'none';
+  });
+
+  logoutContainer.addEventListener('click', (e) => {
+    e.stopPropagation(); 
+  });
+
+});

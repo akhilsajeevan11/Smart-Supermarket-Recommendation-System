@@ -773,7 +773,7 @@ h6 {
 
 /* Wishlist popup - Full screen overlay */
 .wishlist-popup {
-  display: none ; /* Initially hidden */
+  display: none; /* Initially hidden */
   position: fixed;
   top: 0;
   left: 0;
@@ -786,10 +786,17 @@ h6 {
   align-items: center;
 }
 
+/* Only show when .show class is added */
+.wishlist-popup:not(.show) {
+  display: none;
+}
+
 /* Centered popup content */
 .wishlist-content {
   background: white;
-  width: 50%;
+  left: 35%;
+  top: 20px;
+  width: 90%;
   max-width: 600px;
   padding: 20px;
   border-radius: 10px;
@@ -814,7 +821,8 @@ h6 {
   margin-top: 20px;
 }
 
-.wishlist-table th, .wishlist-table td {
+.wishlist-table th,
+.wishlist-table td {
   border-bottom: 1px solid #ddd;
   padding: 10px;
   text-align: center;
@@ -831,7 +839,6 @@ h6 {
   object-fit: cover;
   border-radius: 5px;
 }
-
 
 .dropdown-submenu {
   position: relative;
@@ -920,28 +927,30 @@ section {
 }
 
 .logout-container {
-
-  position: absolute;
-  bottom: -60px;
-  left: 100%;
-  transform: translateX(-50%);
   display: none;
+  position: absolute;
+  right: 10px;
+  top: 50px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .logout-btn {
-  cursor: pointer;
-  background-color:#ffc43f ;
+  background-color: #ffc43f;
   color: white;
   border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
+  /* padding: 10px; */
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
 }
 
 .logout-btn:hover {
-  background-color: #f8b517;
+  background-color: #fac751;
 }
+
 
 @media (max-width: 576px) {
   .dropdown-menu {
