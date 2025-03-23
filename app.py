@@ -1246,7 +1246,7 @@ def checkout():
             # ✅ Create a transaction entry
             cursor.execute("""
                 INSERT INTO Transaction (customer_id, total_amount, payment_status, payment_method)
-                VALUES (%s, %s, 'Pending', 'UPI')
+                VALUES (%s, %s, 'Pending', 'Credit Card')
             """, (customer_id, total_amount))
 
             transaction_id = cursor.lastrowid  # Get the inserted transaction ID
