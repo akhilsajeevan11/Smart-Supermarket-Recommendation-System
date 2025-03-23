@@ -79,48 +79,59 @@
     </div>
 
     <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="offcanvasCart" aria-labelledby="My Cart">
-      <div class="offcanvas-header justify-content-start">
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      <div class="offcanvas-header bg-primary text-white">
+          <h5 class="offcanvas-title">🛒 My Cart</h5>
+          <button type="button" class="btn-close text-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
+  
       <div class="offcanvas-body">
-        <div class="order-md-last">
-          <h4 class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-primary">Your cart</span>
-            <span class="badge bg-primary rounded-pill cart-count">0</span>
-          </h4>
-          
-          <ul class="list-group mb-3 cart-items">
-            {% for product in cart_items %}
-            <li class="list-group-item cart-item" data-product-id="{{ product.product_id }}">
-                <div class="d-flex justify-content-between">
-                    <span class="item-name">{{ product.product_name }}</span>
-                    <span class="item-price">₹{{ product.price }}</span>
-                </div>
-                <div class="input-group product-qty">
-                    <span class="input-group-btn">
-                        <button type="button" class="quantity-left-minus btn btn-danger btn-number" data-type="minus">
-                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                        </button>
-                    </span>
-                    <input type="text" class="form-control input-number" value="1">
-                    <span class="input-group-btn">
-                        <button type="button" class="quantity-right-plus btn btn-success btn-number" data-type="plus">
-                            <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                        </button>
-                    </span>
-                </div>
-            </li>
-            {% endfor %}
-          </ul>
-    
-          <li class="list-group-item d-flex justify-content-between">
-            <span>Total (INR)</span>
-            <strong class="total-amount">₹0</strong>
-          </li>
-          <button id="check-out" class="check-out w-100 btn text-primary border border-primary btn-lg" onclick="proceedToCheckout()">Continue to checkout</button>
-        </div>
+          <div class="order-md-last">
+              <h4 class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="text-primary">Your Cart</span>
+                  <span class="badge bg-primary rounded-pill cart-count">0</span>
+              </h4>
+  
+              <ul class="list-group mb-3 cart-items">
+                  {% for product in cart_items %}
+                  <li class="list-group-item cart-item p-3 shadow-sm" data-product-id="{{ product.product_id }}">
+                      <div class="d-flex align-items-center">
+                          <img src="{{ product.image_url }}" class="rounded me-3" alt="{{ product.product_name }}" width="60" height="60">
+                          <div class="flex-grow-1">
+                              <h6 class="mb-0 item-name">{{ product.product_name }}</h6>
+                              <small class="text-muted">₹{{ product.price }}</small>
+                          </div>
+                          <button class="btn btn-sm btn-outline-danger remove-item">❌</button>
+                      </div>
+  
+                      <div class="input-group product-qty mt-2">
+                          <button type="button" class="quantity-left-minus btn btn-danger btn-number" data-type="minus">➖</button>
+                          <input type="text" class="form-control input-number text-center" value="1">
+                          <button type="button" class="quantity-right-plus btn btn-success btn-number" data-type="plus">➕</button>
+                      </div>
+                  </li>
+                  {% endfor %}
+              </ul>
+  
+              <div class="list-group-item d-flex justify-content-between bg-light border rounded p-3">
+                  <strong>Total (INR)</strong>
+                  <span class="total-amount text-success fw-bold">₹0</span>
+              </div>
+  
+              <button id="check-out" class="check-out w-100 btn btn-primary btn-lg mt-3" onclick="proceedToCheckout()">
+                  ✅ Proceed to Checkout
+              </button>
+  
+              <!-- ✅ Recommended Products Section -->
+              <div id="recommended-products" class="mt-4">
+                  <!-- <h5 class="text-secondary">✨ Recommended for You</h5> -->
+                  <h5 class="text-secondary fw-bold mb-3">✨ Recommended for You</h5>
+                  <div class="row row-cols-2 row-cols-md-3 g-3"></div>
+                  <!-- <div class="row"></div> -->
+              </div>
+          </div>
       </div>
-    </div>
+  </div>
+  
     
     
     <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="offcanvasSearch" aria-labelledby="Search">
@@ -498,7 +509,7 @@
                                                 </button>
                                             </span>
                                         </div>
-                                        <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;">
+                                        <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart(event, this)" >
                                           Add to Cart <iconify-icon icon="uil:shopping-cart"></iconify-icon>
                                       </a>
                                       
@@ -550,7 +561,7 @@
                                                 </button>
                                             </span>
                                         </div>
-                                        <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart({{ product.product_id }})">
+                                        <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart(event, this)">
                                             Add to Cart <iconify-icon icon="uil:shopping-cart"></iconify-icon>
                                         </a>
                                     </div>
@@ -600,7 +611,7 @@
                                                 </button>
                                             </span>
                                         </div>
-                                        <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart({{ product.product_id }})">
+                                        <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart(event, this)" >
                                             Add to Cart <iconify-icon icon="uil:shopping-cart"></iconify-icon>
                                         </a>
                                     </div>
@@ -712,7 +723,7 @@
                           </button>
                         </span>
                       </div>
-                      <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;">
+                      <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart(event, this)">
                         Add to Cart <iconify-icon icon="uil:shopping-cart"></iconify-icon>
                       </a>
                     </div>
@@ -780,7 +791,7 @@
                           </button>
                         </span>
                       </div>
-                      <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart({{product.product_id}})">
+                      <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart(event, this)">
                         Add to Cart <iconify-icon icon="uil:shopping-cart"></iconify-icon>
                       </a>
                     </div>
@@ -843,7 +854,7 @@
                           </button>
                         </span>
                       </div>
-                      <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart({{ product.product_id }})">
+                      <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart(event, this)">
                         Add to Cart <iconify-icon icon="uil:shopping-cart"></iconify-icon>
                       </a>
                     </div>
@@ -856,6 +867,72 @@
         </div>
       </div>
     </section>
+
+    <!-- Dairy & Eggs category -->
+    <section class="py-5 overflow-hidden dairy-eggs" id="dairy-eggs">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="section-header d-flex flex-wrap justify-content-between my-5">
+              <h2 class="section-title">Dairy & Eggs</h2>
+              <div class="d-flex align-items-center">
+                <a class="btn-link text-decoration-none">View All Categories →</a>
+                <div class="swiper-buttons">
+                  <button class="swiper-prev products-carousel-prev btn btn-primary">❮</button>
+                  <button class="swiper-next products-carousel-next btn btn-primary">❯</button>
+                </div>
+              </div>
+            </div>
+            <div class="swiper products-carousel">
+              <div class="swiper-wrapper">
+                {% for product in categorized_products['Dairy & Eggs'] %}
+                <div class="swiper-slide">
+                  <div class="product-item" data-product-id="{{ product.product_id }}">
+                    <span class="badge bg-success position-absolute m-3">-30%</span>
+                    <a class="btn-wishlist" onclick="addToWishlist(event, this)">
+                      <svg width="24" height="24"><use xlink:href="#heart"></use></svg>
+                    </a>
+                    <figure>
+                      <a href="index.html" title="{{ product.product_name }}">
+                        <img src="{{ product.image_url }}" class="img-fluid">
+                      </a>
+                    </figure>
+                    <h3>{{ product.product_name }}</h3>
+                    <span class="qty">{{ product.stock_quantity }} Unit</span>
+                    <span class="rating">
+                      <svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5
+                    </span>
+                    <span class="price">₹{{ product.price }}</span>
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="input-group product-qty">
+                        <span class="input-group-btn">
+                          <button type="button" class="quantity-left-minus btn btn-danger btn-number" data-type="minus">
+                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
+                          </button>
+                        </span>
+                        <input type="text" id="quantity" name="quantity" class="form-control input-number" value="1">
+                        <span class="input-group-btn">
+                          <button type="button" class="quantity-right-plus btn btn-success btn-number" data-type="plus">
+                            <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
+                          </button>
+                        </span>
+                      </div>
+                      <a class="nav-link text-primary border border-primary rounded p-1 add-to-cart-btn" style="cursor: pointer;" onclick="addToCart(event, this)">
+                        Add to Cart <iconify-icon icon="uil:shopping-cart"></iconify-icon>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- Dairy & Eggs category End -->
+
+
 
     <!-- Example Section -->
     <section class="py-5">

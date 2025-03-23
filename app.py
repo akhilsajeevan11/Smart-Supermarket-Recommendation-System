@@ -13,10 +13,11 @@ from datetime import datetime
 from dotenv import load_dotenv
 import pickle
 import uuid
-
-
-
-
+from flask_session import Session
+import dill 
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
 import razorpay
 
 
@@ -26,24 +27,155 @@ UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 load_dotenv()
-model_path = os.getenv('MODEL_PATH')
+# model_path = os.getenv('MODEL_PATH')
 
-# Load the pre-trained model from the pickle file
-def load_model(model_path):
-    try:
-        with open(model_path, 'rb') as file:
-            model = pickle.load(file)
-        return model
-    except Exception as e:
-        print(f"Error loading model: {str(e)}")
-        return None
+# # Load the pre-trained model from the pickle file
+# def load_model(model_path):
+#     try:
+#         with open(model_path, 'rb') as file:
+#             model = pickle.load(file)
+#         return model
+#     except Exception as e:
+#         print(f"Error loading model: {str(e)}")
+#         return None
 
-# Load the model
-model = load_model(model_path)  # ✅ Load the model, not just the path
+# # Load the model
+# model = load_model(model_path)  # ✅ Load the model, not just the path
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') 
 socketio = SocketIO(app)
+
+
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)
+
+
+# ✅ Define Paths
+PRODUCTS_PATH = "/home/alignminds/Desktop/Akhil/Project/Smart Supermarket Recommendation System/Data_set/products.csv"
+ORDERS_PATH = "/home/alignminds/Desktop/Akhil/Project/Smart Supermarket Recommendation System/Data_set/orders.csv"
+PICKLE_PATH = "/home/alignminds/Desktop/Akhil/Project/Model/recommendation_system.pkl"
+
+
+
+
+
+# ✅ Load Datasets
+try:
+    products = pd.read_csv(PRODUCTS_PATH)
+    orders = pd.read_csv(ORDERS_PATH)
+    print(f"✅ Products Loaded: {len(products)} rows")
+    print(f"✅ Orders Loaded: {len(orders)} rows")
+except Exception as e:
+    print(f"❌ Error loading CSV files: {str(e)}")
+    products = pd.DataFrame()
+    orders = pd.DataFrame()
+
+
+# ✅ Load the Pickle File
+try:
+    with open(PICKLE_PATH, "rb") as file:
+        model_data = pickle.load(file)
+    print("✅ Model data loaded successfully!")
+except Exception as e:
+    print(f"❌ Error loading model file: {str(e)}")
+    model_data = {}
+
+
+
+# ✅ Load the pickle file
+try:
+    with open("/home/alignminds/Desktop/Akhil/Project/Model/recommendation_system.pkl", "rb") as file:
+        model_data = pickle.load(file)
+
+    print("✅ Model data loaded successfully!")
+
+except Exception as e:
+    print(f"❌ Error loading model file: {str(e)}")
+    model_data = {}
+
+# ✅ Extract components
+products = model_data.get("products", pd.DataFrame())
+order_products_prior = model_data.get("order_products_prior", pd.DataFrame())
+vectorizer = model_data.get("vectorizer", None)
+product_tfidf_matrix = model_data.get("product_tfidf_matrix", None)
+
+# ✅ Ensure the model is loaded properly
+if "model" in model_data:
+    model = model_data["model"]
+    print("✅ Recommendation model loaded successfully!")
+else:
+    print("🚨 Error: Model is missing in the pickle file! Please retrain and save it.")
+    model = None  # Prevent errors
+
+# ✅ Function to find complementary products
+def find_complementary_products(product_id, top_n=5):
+    """Find complementary products based on co-purchase frequency."""
+    if order_products_prior.empty:
+        return pd.DataFrame()  # Return empty if no order data
+
+    orders_with_product = order_products_prior[order_products_prior['product_id'] == product_id]['order_id'].unique()
+
+    complementary_products = order_products_prior[
+        (order_products_prior['order_id'].isin(orders_with_product)) & 
+        (order_products_prior['product_id'] != product_id)
+    ]
+
+    product_counts = complementary_products['product_id'].value_counts().reset_index()
+    product_counts.columns = ['product_id', 'co_occurrence_count']
+
+    top_complementary = product_counts.head(top_n)
+    result = top_complementary.merge(products[['product_id', 'product_name']], on='product_id')
+
+    return result[['product_id', 'product_name', 'co_occurrence_count']]
+
+# ✅ Function to find similar products (TF-IDF Content-based)
+def find_similar_products(product_name, top_n=5):
+    """Find similar products based on TF-IDF content similarity."""
+    if vectorizer is None or product_tfidf_matrix is None:
+        print("🚨 Vectorizer or TF-IDF matrix is missing!")
+        return pd.DataFrame()
+
+    query_vector = vectorizer.transform([product_name])
+    cosine_sim = cosine_similarity(query_vector, product_tfidf_matrix).flatten()
+
+    similar_indices = cosine_sim.argsort()[-top_n:][::-1]
+    similar_products = products.iloc[similar_indices]
+
+    return similar_products[["product_id", "product_name"]]
+
+
+# # model_path = os.getenv("MODEL_PATH")
+
+# if not model_path:
+#     raise ValueError("MODEL_PATH not found. Check your .env file.")
+
+# model_path="/home/alignminds/Desktop/Akhil/Project/Model/recommendation_system.pkl"
+
+# Load the pre-trained model and functions
+# def load_model(model_path):
+#     try:
+#         with open(model_path, 'rb') as file:
+#             model_data = pickle.load(file)
+        
+#         # Print available keys to check if all components are present
+#         print("Loaded model data keys:", model_data.keys())
+
+#         model = model_data.get("model", None)
+#         products = model_data.get("products", None)
+#         vectorizer = model_data.get("vectorizer", None)
+#         find_similar_products = model_data.get("find_similar_products", None)
+
+#         return model, products, vectorizer, find_similar_products
+
+#     except Exception as e:
+#         print(f"❌ Error loading model: {str(e)}")
+#         return None, None, None, None
+
+# Load everything
+# model, products, vectorizer, find_similar_products = load_model(model_path)
+
 
 
 razorpay_client = razorpay.Client(auth=(
@@ -160,8 +292,12 @@ def login():
                         if not customer:
                             db.insert("INSERT INTO Customer (user_id) VALUES (%s)", (user['user_id'],))
                             db.commit()
-                    
-                    session['customer_id'] = customer['customer_id']  # Set customer_id in session
+                            customer = db.selectOne(
+                                "SELECT customer_id FROM Customer WHERE user_id = %s",
+                                (user['user_id'],)
+                            )  # ✅ Fetch newly inserted customer_id
+                        session['customer_id'] = customer['customer_id']  # ✅ Store customer_id in session
+# Set customer_id in session
                     
                     return jsonify({
                         "success": True,
@@ -189,36 +325,126 @@ def login():
 
 
 
+# ✅ API Endpoint: Get Similar Products
+@app.route('/similar_products', methods=['POST'])
+def similar_products():
+    try:
+        data = request.get_json()
+        product_name = data.get("product_name")
+        print(f"📩 Received request for similar products: {product_name}")
+
+        if not product_name:
+            return jsonify({"success": False, "message": "Product name is required"}), 400
+
+        similar_items = find_similar_products(product_name, top_n=5)
+
+        if similar_items.empty:
+            print("⚠️ No similar products found!")
+            return jsonify({"success": False, "message": "No similar products found"}), 404
+
+        print(f"✅ Similar products found: {similar_items.to_dict(orient='records')}")
+        return jsonify({"success": True, "similar_products": similar_items.to_dict(orient="records")})
+
+    except Exception as e:
+        print(f"❌ Error in /similar_products: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"success": False, "message": str(e)}), 500
+
+# ✅ API Endpoint: Get Complementary Products
+@app.route('/complementary_products', methods=['POST'])
+def complementary_products():
+    try:
+        data = request.get_json()
+        product_id = data.get("product_id")
+
+        if not product_id:
+            return jsonify({"success": False, "message": "Product ID is required"}), 400
+
+        complementary_items = find_complementary_products(product_id, top_n=5)
+
+        if complementary_items.empty:
+            return jsonify({"success": False, "message": "No complementary products found"}), 404
+
+        return jsonify({"success": True, "complementary_products": complementary_items.to_dict(orient="records")})
+
+    except Exception as e:
+        print(f"❌ Error in /complementary_products: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ✅ Function to Find Similar Products by ID (Modified)
+def find_similar_products_by_id(product_id, top_n=5):
+    """Find similar products based on a product ID using TF-IDF."""
+    product_info = products[products["product_id"] == product_id]
+    if product_info.empty:
+        return []
+
+    product_name = product_info.iloc[0]["product_name"]
+    similar_products = find_similar_products(product_name, top_n)
+
+    return similar_products.to_dict(orient="records")
+
+
 @app.route('/recommend', methods=['POST'])
 def recommend():
     try:
-        # Get input data from the request
         data = request.get_json()
-        if not data:
-            return jsonify({"success": False, "message": "No input data provided"}), 400
+        print(f"📩 Received request data: {data}")
 
-        # Example: Extract product_id or user_id from the input data
-        product_id = data.get('product_id')
-        user_id = data.get('user_id')
+        if not data or "user_id" not in data or "products" not in data:
+            return jsonify({"success": False, "message": "Missing required fields (user_id, products)"}), 400
 
-        if not product_id or not user_id:
-            return jsonify({"success": False, "message": "Missing required fields (product_id or user_id)"}), 400
+        user_id = data["user_id"]
+        product_list = data["products"]  # Expecting a list of product names or IDs
 
-        # Prepare input for the model (modify this based on your model's requirements)
-        input_data = [[product_id, user_id]]  # Example input format
+        if not isinstance(product_list, list) or not product_list:
+            return jsonify({"success": False, "message": "Products should be a non-empty list"}), 400
 
-        # Generate recommendations using the model
-        recommendations = model.predict(input_data)  # Use the appropriate method for your model
+        print(f"🔹 User ID: {user_id}, Products: {product_list}")
 
-        # Return the recommendations
+        product_ids = []
+        
+        # Check if product_list contains names or IDs
+        for product in product_list:
+            if isinstance(product, int):  # If product is already an ID
+                product_ids.append(product)
+            else:  # Search for product by name
+                product_info = products[products['product_name'].str.contains(product, case=False, na=False)]
+                if not product_info.empty:
+                    product_ids.append(product_info.iloc[0]['product_id'])
+
+        if not product_ids:
+            return jsonify({"success": False, "message": "No valid product IDs found"}), 404
+
+        print(f"🔹 Found Product IDs: {product_ids}")
+
+        # Collect recommendations for each product in the cart
+        all_recommendations = []
+        for pid in product_ids:
+            similar_items = find_similar_products_by_id(pid, top_n=3)  # Get 3 recommendations per product
+            all_recommendations.extend(similar_items)
+
+        # Remove duplicates
+        unique_recommendations = {rec["product_id"]: rec for rec in all_recommendations}.values()
+
+        if not unique_recommendations:
+            return jsonify({"success": False, "message": "No recommendations found"}), 404
+
         return jsonify({
             "success": True,
-            "recommendations": recommendations.tolist()  # Convert numpy array to list
+            "recommendations": list(unique_recommendations)
         })
 
     except Exception as e:
-        print(f"Error generating recommendations: {str(e)}")
+        print(f"❌ Error generating recommendations: {str(e)}")
+        traceback.print_exc()
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+
+
+
 
 
 
@@ -678,28 +904,6 @@ def handle_add_product(data):
 
 
 
-# @app.route('/delete_product/<int:product_id>', methods=['DELETE'])
-# def delete_product(product_id):
-#     try:
-#         staff_id = session.get('staff_id')
-#         if not staff_id:
-#             return jsonify({"success": False, "message": "Staff ID not found in session"}), 400
-
-#         # ✅ Delete the product
-#         delete_product_from_db(product_id, staff_id)
-
-#         # ✅ Update the InventoryLog
-#         response = update_inventory_log(product_id)
-#         if not response.get_json()["success"]:  # Use get_json() to parse the response
-#             return response  # Return the error response from update_inventory_log
-
-#         socketio.emit('product_deleted', {'product_id': product_id})  # WebSocket Emit
-#         return jsonify({"success": True, "message": "Product deleted and inventory log updated"})
-
-#     except Exception as e:
-#         print(f"Error deleting product: {str(e)}")
-#         return jsonify({"success": False, "message": str(e)}), 500
-
 @app.route('/delete_product/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
     try:
@@ -778,38 +982,72 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+
 @app.route('/checkout', methods=['POST'])
 def checkout():
     try:
-        # Log session data for debugging
-        print("Session data:", session)
+        print("🔍 Session before checkout:", dict(session))  # Debugging
 
-        # Get customer_id from session
         customer_id = session.get('customer_id')
         if not customer_id:
+            print("❌ Checkout error: Customer not logged in")
             return jsonify({"error": "Customer not logged in"}), 401
 
         data = request.get_json()
         if not data:
+            print("❌ Checkout error: No data provided")
             return jsonify({"error": "No data provided"}), 400
 
         cart_items = data.get('cart_items', [])
-        total_amount = data.get('total_amount', 0)
-        print("Cart items:", cart_items)
-        print("Total amount:", total_amount)
-
         if not cart_items:
+            print("❌ Checkout error: Cart is empty")
             return jsonify({"error": "Cart is empty"}), 400
 
-        # Store cart items in session for later use
-        session['cart_items'] = cart_items
-        session['total_amount'] = total_amount
+        # ✅ Convert 'price' to 'amount' if necessary
+        for item in cart_items:
+            if 'price' in item:
+                item['amount'] = item.pop('price')
 
-        # Redirect to payment page with total_amount
-        return redirect(f'/payment?total_amount={total_amount}')
+        total_amount = sum(item['amount'] * item['quantity'] for item in cart_items)
+
+        # ✅ Check if session total matches calculated total
+        session_total = session.get('total_amount', 0)
+        if session_total != total_amount:
+            print(f"⚠️ Mismatch: Session total ({session_total}) vs. Calculated total ({total_amount})")
+            session['total_amount'] = total_amount  # Sync totals
+            session.modified = True
+
+        # ✅ Store data in session
+        session['cart_items'] = cart_items
+        session.modified = True
+
+        print("✅ Updated session data:", dict(session))  # Debugging
+
+        # ✅ Create a transaction entry
+        with Db() as db:
+            cursor = db.connection.cursor()
+            cursor.execute("""
+                INSERT INTO Transaction (customer_id, total_amount, payment_status, payment_method)
+                VALUES (%s, %s, 'Pending', 'UPI')
+            """, (customer_id, total_amount))
+
+            transaction_id = cursor.lastrowid  # Get the inserted transaction ID
+            db.connection.commit()
+
+        print(f"🔗 Proceeding to payment: transaction_id={transaction_id}, total_amount={total_amount}")
+
+        return jsonify({"transaction_id": transaction_id, "total_amount": total_amount})
+
     except Exception as e:
-        print("Error during checkout:", e)
-        return jsonify({"error": "An error occurred during checkout"}), 500
+        print(f"❌ Checkout error: {str(e)}")  # Log exact error
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+
+
+
 
 @app.route('/update_inventory_log/<int:product_id>', methods=['PUT'])
 def update_inventory_log(product_id):
@@ -885,117 +1123,209 @@ def notify_staff():
     except Exception as e:
         print(f"Error inserting notification: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
-
-
+    
 
 @app.route('/create_order', methods=['POST'])
 def create_order():
     try:
-        # Get JSON data from request
         data = request.json
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
-        # Get transaction_id and total_amount from request
-        transaction_id = data.get('transaction_id')
-        total_amount = data.get('total_amount')
-        if not transaction_id or not total_amount:
-            return jsonify({'error': 'Transaction ID and total amount are required'}), 400
+        customer_id = session.get('customer_id')
+        if not customer_id:
+            return jsonify({'error': 'Customer not logged in'}), 401
 
-        # Convert total amount to paise (Razorpay requires amount in paise)
-        amount = int(float(total_amount) * 100)
+        total_amount = session.get('total_amount', 0)
+        payment_method = data.get('payment_method', 'Credit Card')
 
-        # Create Razorpay order
+        if total_amount <= 0:
+            return jsonify({'error': 'Invalid total amount'}), 400
+
+        amount = int(float(total_amount) * 100)  # Convert to paise
+
+        with Db() as db:
+            cursor = db.connection.cursor()
+
+            # ✅ Check if an existing transaction exists for this customer and amount
+            cursor.execute("""
+                SELECT transaction_id, payment_status FROM Transaction
+                WHERE customer_id = %s AND total_amount = %s
+                ORDER BY transaction_id DESC LIMIT 1
+            """, (customer_id, total_amount))
+            
+            existing_transaction = cursor.fetchone()
+
+            if existing_transaction:
+                transaction_id = existing_transaction["transaction_id"]
+                print(f"✅ Existing transaction found: {transaction_id}")
+
+            else:
+                # ✅ Create new transaction if not exists
+                cursor.execute("""
+                    INSERT INTO Transaction (customer_id, total_amount, payment_status, payment_method)
+                    VALUES (%s, %s, 'Pending', %s)
+                """, (customer_id, total_amount, payment_method))
+
+                transaction_id = cursor.lastrowid
+                db.connection.commit()
+
+                print(f"✅ New transaction created: {transaction_id}")
+
+        # ✅ Create Razorpay Order (only once)
         order = razorpay_client.order.create({
             'amount': amount,
             'currency': 'INR',
             'payment_capture': 1
         })
 
-        return jsonify(order), 200
+        razorpay_order_id = order['id']
+
+        return jsonify({'order': order, 'transaction_id': transaction_id, 'payment_method': payment_method}), 200
 
     except Exception as e:
-        print("Create Order Error:", str(e))
+        print("❌ Create Order Error:", str(e))
         return jsonify({'error': str(e)}), 500
 
+    
 @app.route('/payment_verification', methods=['POST'])
 def payment_verification():
     try:
-        # Get JSON data from request
         data = request.json
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
-        # Verify required fields
-        required_fields = ['razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature', 'transaction_id']
+        required_fields = ['razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature', 'transaction_id', 'payment_method']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
 
-        # Verify payment signature
-        razorpay_client.utility.verify_payment_signature({
-            'razorpay_order_id': data['razorpay_order_id'],
-            'razorpay_payment_id': data['razorpay_payment_id'],
-            'razorpay_signature': data['razorpay_signature']
-        })
+        transaction_id = data['transaction_id']
+        payment_method = data['payment_method']
 
-        # Update transaction status
+        # ✅ Verify Razorpay Signature
+        try:
+            razorpay_client.utility.verify_payment_signature({
+                'razorpay_order_id': data['razorpay_order_id'],
+                'razorpay_payment_id': data['razorpay_payment_id'],
+                'razorpay_signature': data['razorpay_signature']
+            })
+        except Exception as e:
+            print(f"❌ Razorpay Signature Verification Failed: {str(e)}")
+            return jsonify({'error': 'Signature verification failed'}), 400
+
         with Db() as db:
             cursor = db.connection.cursor()
+
+            # ✅ Ensure transaction exists and is not already marked as Success
+            cursor.execute("SELECT payment_status FROM Transaction WHERE transaction_id = %s", (transaction_id,))
+            transaction = cursor.fetchone()
+
+            if not transaction:
+                return jsonify({'error': 'Invalid transaction ID'}), 400
+
+            if transaction["payment_status"] == "Success":
+                return jsonify({'message': 'Payment already verified', 'transaction_id': transaction_id}), 200
+
+            # ✅ Update existing transaction status
             cursor.execute("""
                 UPDATE Transaction 
-                SET payment_status = 'Success'
+                SET payment_status = 'Success', payment_method = %s
                 WHERE transaction_id = %s
-            """, (data['transaction_id'],))
-            
-            # Insert into Payment table
+            """, (payment_method, transaction_id))
+
+            # ✅ Insert into Payment table
             cursor.execute("""
                 INSERT INTO Payment (transaction_id, amount, payment_method, payment_status)
-                SELECT transaction_id, total_amount, payment_method, 'Success'
+                SELECT transaction_id, total_amount, %s, 'Success'
                 FROM Transaction
                 WHERE transaction_id = %s
-            """, (data['transaction_id'],))
-            
+            """, (payment_method, transaction_id))
+
             db.connection.commit()
 
-        return jsonify({'status': 'success'}), 200
+        return jsonify({'status': 'success', 'transaction_id': transaction_id}), 200
 
     except Exception as e:
-        db.connection.rollback()
+        print(f"❌ Payment Verification Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/payment', methods=['GET'])
+
+
+
+@app.route('/payment')
 def payment():
-    total_amount = request.args.get('total_amount', 0)  # Get total amount from query parameters
-    return render_template('payment/payment.html', total_amount=total_amount)  # Pass total amount to the template
+    transaction_id = request.args.get('transaction_id')
+    total_amount = request.args.get('total_amount', 0)
+
+    if not transaction_id or transaction_id == "undefined":
+        return "Invalid transaction ID", 400  # Ensure transaction ID is valid
+
+    return render_template('payment/payment.html', total_amount=total_amount, transaction_id=transaction_id)
 
 @app.route('/add-to-cart', methods=['POST'])
 def add_to_cart():
-    data = request.get_json()
-    product_id = data.get('product_id')
-    product_name = data.get('product_name')
-    quantity = data.get('quantity')
-    amount = data.get('amount')
+    try:
+        data = request.get_json()
+        print("📩 Received Data:", data)  # Debug request payload
 
-    if not product_id:
-        return jsonify({'success': False, 'message': 'Missing product_id'})
+        if not data:
+            return jsonify({"success": False, "error": "No data received"}), 400
 
-    # Initialize cart if it doesn't exist
-    if 'cart' not in session:
-        session['cart'] = []
+        product_id = str(data.get('product_id'))  # Ensure product_id exists
+        product_name = data.get('name', 'Unknown Product')  # Get product name
 
-    # Add item to cart
-    session['cart'].append({
-        'product_id': product_id,
-        'product_name': product_name,
-        'quantity': quantity,
-        'amount': amount
+        if not product_id:
+            return jsonify({"success": False, "error": "Missing product_id"}), 400
+
+        customer_id = session.get('customer_id')  # Use session-stored customer_id
+        quantity = int(data.get('quantity', 1))  # Default to 1
+        amount = int(data.get('amount', data.get('price', 0)))  # Convert price -> amount if needed
+
+        if not customer_id:
+            return jsonify({"success": False, "error": "Customer not logged in"}), 401
+
+        # ✅ Store in session
+        cart = session.get('cart_items', [])
+        cart.append({'product_id': product_id, 'name': product_name, 'quantity': quantity, 'amount': amount})
+        session['cart_items'] = cart
+        session['total_amount'] = sum(item['amount'] for item in cart)  # Update total
+        session.modified = True
+
+        print("✅ Item added to cart successfully:", session['cart_items'])
+
+        # ✅ Fetch recommended products
+        recommended_products = find_similar_products(product_name, top_n=5)
+        recommended_list = recommended_products.to_dict(orient="records") if not recommended_products.empty else []
+
+        return jsonify({
+            "success": True,
+            "message": "Item added to cart",
+            "recommended_products": recommended_list  # Send recommended products
+        })
+
+    except Exception as e:
+        print(f"🚨 Error adding to cart: {str(e)}")
+        return jsonify({"success": False, "error": "Internal Server Error"}), 500
+
+    
+
+
+@app.route('/check-session')
+def check_session():
+    customer_id = session.get('customer_id')
+    print(f"🧐 Checking session: customer_id={customer_id}")  # Debugging
+    return jsonify({'customer_id': customer_id})
+
+
+@app.route('/debug-session')
+def debug_session():
+    return jsonify({
+        "user_id": session.get('user_id'),
+        "customer_id": session.get('customer_id'),
+        "role": session.get('role')
     })
 
-    # Debug: Print session cart
-    print("Session cart after adding item:", session['cart'])
-
-    return jsonify({'success': True, 'cart': session['cart']})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
