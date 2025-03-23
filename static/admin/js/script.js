@@ -1,45 +1,89 @@
-document.addEventListener("DOMContentLoaded", function() {
-    // Initialize Chart
-    const ctx = document.getElementById("salesChart").getContext("2d");
-    new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-            datasets: [{
-                label: "Sales (in $1000s)",
-                data: [12, 19, 3, 5, 2, 3],
-                backgroundColor: "rgba(54, 162, 235, 0.5)"
-            }]
-        },
-        
-    });
-
-    // Handle user form submission
-    const userForm = document.getElementById("userForm");
-    if (userForm) {
-        userForm.addEventListener("submit", function(event) {
-            event.preventDefault();
-            console.log("Form submitted");  // Debugging
-            createUser();
-        });
-    } else {
-        console.error("Form with ID 'userForm' not found");  // Debugging
-    }
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("✅ DOM Loaded - Fetching sales data...");
+    fetchSalesData();
 });
 
+// Fetch Sales Data
+function fetchSalesData() {
+    console.log("🔄 Fetching sales data...");
+    fetch('/sales_data')
+        .then(response => response.json())
+        .then(data => {
+            console.log("✅ Sales Data Received:", data);
+
+            if (data.success) {
+                const labels = data.sales_data.map(item => item.product_name);
+                const salesValues = data.sales_data.map(item => item.total_sales);
+                renderSalesChart(labels, salesValues);
+            } else {
+                console.error("❌ Error fetching sales data:", data.error);
+            }
+        })
+        .catch(error => console.error("❌ Fetch Error:", error));
+}
+
+// Render Chart
+function renderSalesChart(labels, salesValues) {
+    console.log("🎨 Rendering Sales Chart...");
+
+    const canvas = document.getElementById("salesChart");
+    if (!canvas) {
+        console.error("❌ Canvas element 'salesChart' not found!");
+        return;
+    }
+
+    const ctx = canvas.getContext("2d");
+
+    // Destroy existing chart if it exists
+    if (window.salesChart && typeof window.salesChart.destroy === "function") {
+        console.log("🗑️ Destroying previous chart...");
+        window.salesChart.destroy();
+    }
+
+    // Create new chart instance
+    window.salesChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Total Sales",
+                data: salesValues,
+                backgroundColor: "rgba(54, 162, 235, 0.6)"
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    console.log("✅ Chart Rendered Successfully!");
+}
+
+
+// Show Section Function (Sidebar Navigation)
 function showSection(sectionId) {
     document.querySelectorAll('.content > div').forEach(div => div.style.display = 'none');
     document.getElementById(sectionId).style.display = 'block';
+
+    // Re-fetch data when clicking Dashboard
+    if (sectionId === 'dashboard') {
+        fetchSalesData();
+    }
+
     if (window.innerWidth < 768) {
         toggleSidebar();
     }
 }
 
+// Toggle Sidebar for Mobile View
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('active');
 }
 
-// usermanagment script
+
+// ✅ User Management - Create User Function
 async function createUser() {
     console.log("createUser function called");  // Debugging
     
@@ -55,23 +99,22 @@ async function createUser() {
     try {
         const response = await fetch('/admin/create_user', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
         });
 
         const result = await response.json();
         const messageDiv = document.getElementById("message");
-        
+
         if (response.ok) {
             messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-            // Clear form values
+            // ✅ Clear form values
             document.getElementById("username").value = "";
             document.getElementById("email").value = "";
             document.getElementById("password").value = "";
             document.getElementById("role").value = "Manager";  // Reset to default role
-            // Refresh the page after 2 seconds
+            
+            // ✅ Refresh the page after 2 seconds
             setTimeout(() => {
                 window.location.reload();
             }, 2000);
