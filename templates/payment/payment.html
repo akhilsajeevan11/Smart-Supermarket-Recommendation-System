@@ -1,117 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Payment</title>
-</head>
-<body>
-    <h1>Complete Your Payment</h1>
-    <p>Total Amount to Pay: ₹<span id="totalAmount">{{ total_amount }}</span></p>
-
-    <!-- Payment Method Selection -->
-    <label for="paymentMethod">Choose Payment Method:</label>
-    <select id="paymentMethod">
-        <option value="Credit Card">Credit Card</option>
-        <option value="Debit Card">Debit Card</option>
-    </select>
-    
-
-    <button id="payBtn">Pay Now</button>
+  </head>
+  <body>
+    <style>
+        body {
+          margin: 0;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .payment-card {
+          background-color: #fff;
+          border-radius: 30px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+          padding: 50px;
+          max-width: 450px;
+          width: 100%;
+          text-align: center;
+        }
+        .payment-card h1 {
+          margin-bottom: 20px;
+          font-size: 2.5rem;
+          color: #333;
+        }
+        .payment-card p strong {
+          font-size: 1.8rem;
+          color: #764ba2;
+        }
+        .form-select,
+        .form-control {
+          border-radius: 10px;
+        }
+        .btn-custom {
+          background-color: #667eea;
+          color: #fff;
+          border: none;
+          border-radius: 12px;
+          padding: 12px 0;
+          font-size: 1.1rem;
+          transition: background-color 0.3s;
+        }
+        .btn-custom:hover {
+          background-color: #556cd6;
+        }
+        .footer-note {
+          margin-top: 30px;
+          font-size: 0.9rem;
+          color: #666;
+        }
+      </style>
+    <div class="payment-card">
+        <h1>Payment Summary</h1>
+        <p>
+          You are about to pay:
+          <strong>₹<span id="totalAmount">{{ total_amount}}</span></strong>
+        </p>
+        <div class="form-group text-start mb-4">
+          <label for="paymentMethod" class="form-label"
+            >Select Payment Method:</label
+          >
+          <select id="paymentMethod" class="form-select">
+            <option value="Credit Card">Credit Card</option>
+            <option value="Debit Card">Debit Card</option>
+            <option value="UPI">UPI</option>
+            <option value="Net Banking">Net Banking</option>
+          </select>
+        </div>
+        <button id="payBtn" class="btn btn-custom w-100">Proceed to Pay</button>
+        <div class="footer-note">
+          Your payment is secured and encrypted.
+        </div>
+      </div>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", async function () {
-            const transactionId = "{{ transaction_id|default('0') }}";
-            const totalAmount = parseFloat("{{ total_amount|default(0) }}") || 0;
+      document.addEventListener("DOMContentLoaded", async function () {
+        const transactionId = "{{ transaction_id|default('0') }}";
+        const totalAmount = parseFloat("{{ total_amount|default(0) }}") || 0;
 
-            console.log("🔍 Loaded Payment Page - Transaction ID:", transactionId, "Total Amount:", totalAmount);
+        console.log(
+          "🔍 Loaded Payment Page - Transaction ID:",
+          transactionId,
+          "Total Amount:",
+          totalAmount
+        );
 
-            if (!transactionId || transactionId === "undefined" || totalAmount <= 0) {
-                alert("Invalid payment details. Please try again.");
-                window.location.href = "/checkout";
-                return;
-            }
+        if (
+          !transactionId ||
+          transactionId === "undefined" ||
+          totalAmount <= 0
+        ) {
+          alert("Invalid payment details. Please try again.");
+          window.location.href = "/checkout";
+          return;
+        }
 
-            document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+        document.getElementById("totalAmount").textContent =
+          totalAmount.toFixed(2);
 
-            document.getElementById('payBtn').onclick = async function () {
-                const payBtn = this;
-                payBtn.disabled = true;
-                payBtn.textContent = "Processing...";
+        document.getElementById("payBtn").onclick = async function () {
+          const payBtn = this;
+          payBtn.disabled = true;
+          payBtn.textContent = "Processing...";
 
-                const selectedPaymentMethod = document.getElementById("paymentMethod").value;
+          const selectedPaymentMethod =
+            document.getElementById("paymentMethod").value;
 
+          try {
+            const res = await fetch("/create_order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                transaction_id: transactionId,
+                total_amount: totalAmount,
+                payment_method: selectedPaymentMethod,
+              }),
+            });
+
+            const order = await res.json();
+            if (!res.ok)
+              throw new Error(order.error || "Failed to create order");
+
+            const options = {
+              key: "rzp_test_3UulXQvQM07Hh2",
+              amount: order.order.amount,
+              currency: order.order.currency,
+              order_id: order.order.id,
+              name: "My Store",
+              description: "Order Payment",
+              image: "https://example.com/logo.png",
+              theme: { color: "#3399cc" },
+              prefill: {
+                email: "customer@example.com",
+                contact: "9876543210",
+              },
+              handler: async function (response) {
                 try {
-                    const res = await fetch('/create_order', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            transaction_id: transactionId, 
-                            total_amount: totalAmount,
-                            payment_method: selectedPaymentMethod
-                        })
-                    });
+                  const verifyRes = await fetch("/payment_verification", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      ...response,
+                      transaction_id: transactionId,
+                      payment_method: selectedPaymentMethod,
+                    }),
+                  });
 
-                    const order = await res.json();
-                    if (!res.ok) throw new Error(order.error || 'Failed to create order');
-
-                    const options = {
-                        "key": "rzp_test_3UulXQvQM07Hh2",
-                        "amount": order.order.amount,
-                        "currency": order.order.currency,
-                        "order_id": order.order.id,
-                        "name": "My Store",
-                        "description": "Order Payment",
-                        "image": "https://example.com/logo.png",
-                        "theme": { "color": "#3399cc" },
-                        "prefill": { 
-                            "email": "customer@example.com",
-                            "contact": "9876543210"
-                        },
-                        "handler": async function (response) {
-                            try {
-                                const verifyRes = await fetch('/payment_verification', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ 
-                                        ...response, 
-                                        transaction_id: transactionId,
-                                        payment_method: selectedPaymentMethod
-                                    })
-                                });
-
-                                const verifyData = await verifyRes.json();
-                                if (verifyData.status === 'success') {
-                                    alert("Payment Successful!");
-                                    window.location.href = '/home';
-                                } else {
-                                    alert('Payment verification failed.');
-                                }
-                            } catch (error) {
-                                console.error('Verification error:', error);
-                                alert('Error verifying payment.');
-                            }
-                        }
-                    };
-
-                    const rzp = new Razorpay(options);
-                    rzp.on('payment.failed', function (response) {
-                        console.error("Payment failed:", response.error);
-                        alert(`Payment failed: ${response.error.code}\nReason: ${response.error.reason}`);
-                        payBtn.disabled = false;
-                        payBtn.textContent = "Pay Now";
-                    });
-
-                    rzp.open();
+                  const verifyData = await verifyRes.json();
+                  if (verifyData.status === "success") {
+                    alert("Payment Successful!");
+                    window.location.href = "/home";
+                  } else {
+                    alert("Payment verification failed.");
+                  }
                 } catch (error) {
-                    console.error('Payment error:', error);
-                    alert('Payment failed: ' + error.message);
-                    payBtn.disabled = false;
-                    payBtn.textContent = "Pay Now";
+                  console.error("Verification error:", error);
+                  alert("Error verifying payment.");
                 }
+              },
             };
-        });
+
+            const rzp = new Razorpay(options);
+            rzp.on("payment.failed", function (response) {
+              console.error("Payment failed:", response.error);
+              alert(
+                `Payment failed: ${response.error.code}\nReason: ${response.error.reason}`
+              );
+              payBtn.disabled = false;
+              payBtn.textContent = "Pay Now";
+            });
+
+            rzp.open();
+          } catch (error) {
+            console.error("Payment error:", error);
+            alert("Payment failed: " + error.message);
+            payBtn.disabled = false;
+            payBtn.textContent = "Pay Now";
+          }
+        };
+      });
     </script>
-</body>
+  </body>
 </html>

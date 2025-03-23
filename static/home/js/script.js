@@ -168,6 +168,7 @@ async function addToCart(event, btn) {
   }
 
   localStorage.setItem("cart", JSON.stringify(cart));
+  alert("✅ Product Added to Cart")
   updateCartUI();
 
   // ✅ Fetch recommended products from the backend
