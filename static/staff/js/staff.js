@@ -120,8 +120,6 @@ function removeProductFromUI(product_id) {
     updateProductList();
 }
 
-
-
 // Get staff ID from session
 function getStaffId() {
     return window.staffId || "";
@@ -208,4 +206,16 @@ function sendNotification(productName, stockQuantity, staffId) {
         }
     })
     .catch(error => console.error("Error:", error));
+}
+
+// Check for low-stock products and send notifications
+function checkLowStock() {
+    if (!window.products || window.products.length === 0) return;
+
+    const lowStockProducts = window.products.filter(product => product.stock < 10);
+    const staffId = getStaffId();
+
+    lowStockProducts.forEach(product => {
+        sendNotification(product.name, product.stock, staffId);
+    });
 }
