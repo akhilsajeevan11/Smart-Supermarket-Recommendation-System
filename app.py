@@ -145,36 +145,6 @@ def find_similar_products(product_name, top_n=5):
     return similar_products[["product_id", "product_name"]]
 
 
-# # model_path = os.getenv("MODEL_PATH")
-
-# if not model_path:
-#     raise ValueError("MODEL_PATH not found. Check your .env file.")
-
-# model_path="/home/alignminds/Desktop/Akhil/Project/Model/recommendation_system.pkl"
-
-# Load the pre-trained model and functions
-# def load_model(model_path):
-#     try:
-#         with open(model_path, 'rb') as file:
-#             model_data = pickle.load(file)
-        
-#         # Print available keys to check if all components are present
-#         print("Loaded model data keys:", model_data.keys())
-
-#         model = model_data.get("model", None)
-#         products = model_data.get("products", None)
-#         vectorizer = model_data.get("vectorizer", None)
-#         find_similar_products = model_data.get("find_similar_products", None)
-
-#         return model, products, vectorizer, find_similar_products
-
-#     except Exception as e:
-#         print(f"❌ Error loading model: {str(e)}")
-#         return None, None, None, None
-
-# Load everything
-# model, products, vectorizer, find_similar_products = load_model(model_path)
-
 
 
 razorpay_client = razorpay.Client(auth=(
@@ -225,6 +195,8 @@ def login():
             elif '@manager' in email:
                 role = 'Manager'
                 redirect_url = url_for('manager')
+
+            print(f"Redirect URL: {redirect_url}")  # Debugging
 
             db = Db()
             
@@ -282,6 +254,8 @@ def login():
                         'user_id': user['user_id'],
                         'role': user['role']
                     })
+                    session.modified = True
+                    print("Session after login:", dict(session))  # Debugging
 
                     # ✅ Clear and initialize cart for new login session
                     session['cart_items'] = []
@@ -748,6 +722,8 @@ def handle_notify_staff(data):
     # Broadcast the notification to all staff
     emit('new_notification', data, broadcast=True)
 
+
+
 @app.route('/manager')
 def manager():
     if 'manager_id' not in session:  # Check if manager is logged in
@@ -769,9 +745,6 @@ def manager():
     except Exception as e:
         print(f"Error fetching low-stock products: {str(e)}")
         return render_template("manager/index.html", low_stock_products=[])
-
-
-
 
 
 
@@ -808,7 +781,9 @@ def send_notification():
 
 @app.route("/staff")
 def staff():
-    if 'staff_id' not in session:  # Check if staff is logged in
+    # Check if user is logged in and has the role of Staff
+    if 'user_id' not in session or session.get('role') != 'Staff':
+        print("Unauthorized access to /staff. Redirecting to login.")  # Debugging
         return redirect(url_for('login'))
 
     try:
@@ -1041,7 +1016,7 @@ def delete_product_from_db(product_id, staff_id):
     with Db() as db:
         try:
             # ✅ Fetch the product image path before deletion
-            image_result = db.selectOne(select_image_query, (product_id,))  # Use selectOne instead of fetchone
+            image_result = db.selectOne(select_image_query, (product_id,))
 
             if image_result and image_result["image_url"]:  # ✅ Ensure image exists
                 image_url = image_result["image_url"].strip("/")  # Normalize path
