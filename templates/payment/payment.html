@@ -1,79 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment</title>
 </head>
 <body>
     <h1>Complete Your Payment</h1>
-    <p>Total Amount to Pay: ₹<span id="totalAmount"></span></p>
+    <p>Total Amount to Pay: ₹<span id="totalAmount">{{ total_amount }}</span></p>
+
+    <!-- Payment Method Selection -->
+    <label for="paymentMethod">Choose Payment Method:</label>
+    <select id="paymentMethod">
+        <option value="UPI">UPI</option>
+        <option value="Credit Card">Credit Card</option>
+        <option value="Debit Card">Debit Card</option>
+        <option value="Cash">Cash</option>
+    </select>
+    
+
     <button id="payBtn">Pay Now</button>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
-        // Get total_amount and transaction_id from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const totalAmount = urlParams.get('total_amount'); // Get total amount from query params
-        const transactionId = urlParams.get('transaction_id'); // Get transaction ID from query params
+        document.addEventListener("DOMContentLoaded", async function () {
+            const transactionId = "{{ transaction_id|default('0') }}";
+            const totalAmount = parseFloat("{{ total_amount|default(0) }}") || 0;
 
-        // Display total amount on the page
-        document.getElementById('totalAmount').textContent = totalAmount || '0';
+            console.log("🔍 Loaded Payment Page - Transaction ID:", transactionId, "Total Amount:", totalAmount);
 
-        document.getElementById('payBtn').onclick = async function () {
-            try {
-                if (!transactionId) {
-                    throw new Error('Transaction ID not found');
-                }
-
-                // Create order with transaction_id and total_amount
-                const res = await fetch('/create_order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        transaction_id: transactionId,
-                        total_amount: totalAmount // Pass total amount to the backend
-                    })
-                });
-
-                const order = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(order.error || 'Failed to create order');
-                }
-
-                // Razorpay payment options
-                const options = {
-                    "key": "rzp_test_3UulXQvQM07Hh2", // Your Razorpay key
-                    "amount": order.amount, // Amount in paise
-                    "currency": order.currency,
-                    "order_id": order.id,
-                    "handler": function (response) {
-                        // Verify payment
-                        fetch('/payment_verification', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                ...response,
-                                transaction_id: transactionId
-                            })
-                        }).then(res => res.json())
-                          .then(data => {
-                            if (data.status === 'success') {
-                                window.location.href = '/order_success';
-                            } else {
-                                alert('Payment verification failed');
-                            }
-                          });
-                    }
-                };
-
-                // Open Razorpay payment window
-                const rzp1 = new Razorpay(options);
-                rzp1.open();
-            } catch (error) {
-                console.error('Payment error:', error);
-                alert('Payment failed: ' + error.message);
+            if (!transactionId || transactionId === "undefined" || totalAmount <= 0) {
+                alert("Invalid payment details. Please try again.");
+                window.location.href = "/checkout";
+                return;
             }
-        };
+
+            document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+
+            document.getElementById('payBtn').onclick = async function () {
+                const payBtn = this;
+                payBtn.disabled = true;
+                payBtn.textContent = "Processing...";
+
+                const selectedPaymentMethod = document.getElementById("paymentMethod").value;
+
+                try {
+                    const res = await fetch('/create_order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            transaction_id: transactionId, 
+                            total_amount: totalAmount,
+                            payment_method: selectedPaymentMethod
+                        })
+                    });
+
+                    const order = await res.json();
+                    if (!res.ok) throw new Error(order.error || 'Failed to create order');
+
+                    const options = {
+                        "key": "rzp_test_3UulXQvQM07Hh2",
+                        "amount": order.order.amount,
+                        "currency": order.order.currency,
+                        "order_id": order.order.id,
+                        "name": "My Store",
+                        "description": "Order Payment",
+                        "image": "https://example.com/logo.png",
+                        "theme": { "color": "#3399cc" },
+                        "prefill": { 
+                            "email": "customer@example.com",
+                            "contact": "9876543210"
+                        },
+                        "handler": async function (response) {
+                            try {
+                                const verifyRes = await fetch('/payment_verification', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                        ...response, 
+                                        transaction_id: transactionId,
+                                        payment_method: selectedPaymentMethod
+                                    })
+                                });
+
+                                const verifyData = await verifyRes.json();
+                                if (verifyData.status === 'success') {
+                                    alert("Payment Successful!");
+                                    window.location.href = '/home';
+                                } else {
+                                    alert('Payment verification failed.');
+                                }
+                            } catch (error) {
+                                console.error('Verification error:', error);
+                                alert('Error verifying payment.');
+                            }
+                        }
+                    };
+
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function (response) {
+                        console.error("Payment failed:", response.error);
+                        alert(`Payment failed: ${response.error.code}\nReason: ${response.error.reason}`);
+                        payBtn.disabled = false;
+                        payBtn.textContent = "Pay Now";
+                    });
+
+                    rzp.open();
+                } catch (error) {
+                    console.error('Payment error:', error);
+                    alert('Payment failed: ' + error.message);
+                    payBtn.disabled = false;
+                    payBtn.textContent = "Pay Now";
+                }
+            };
+        });
     </script>
 </body>
 </html>
