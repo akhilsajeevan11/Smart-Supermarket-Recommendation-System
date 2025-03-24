@@ -152,84 +152,77 @@ function previewImage(event) {
     }
 }
 
-// Toggle notifications dropdown
+document.addEventListener("DOMContentLoaded", function () {
+    fetchProducts();
+    
+    socket.on("new_notification", (data) => {
+        handleNewNotification(data);
+    });
+});
+
+// Toggle Notifications List
 function toggleNotifications() {
     const dialog = document.getElementById("notification-dialog");
-    const notificationList = document.getElementById("notification-list");
-
-    // Update the notification list when the dropdown is opened
-    if (dialog.style.display === "none" || dialog.style.display === "") {
-        // Clear the list
-        notificationList.innerHTML = "";
-
-        // Add all notifications to the list
-        if (notifications.length > 0) {
-            notifications.forEach(notification => {
-                const notificationItem = document.createElement("li");
-                notificationItem.className = "list-group-item";
-                notificationItem.textContent = notification.message;
-                notificationList.appendChild(notificationItem);
-            });
-        } else {
-            // Show "No notifications" message
-            const noNotificationItem = document.createElement("li");
-            noNotificationItem.className = "list-group-item text-muted";
-            noNotificationItem.textContent = "No notifications";
-            notificationList.appendChild(noNotificationItem);
-        }
-    }
-
-    // Toggle the dropdown visibility
     dialog.style.display = dialog.style.display === "none" || dialog.style.display === "" ? "block" : "none";
+
+    updateNotificationUI(); // Refresh notification UI when opened
 }
 
-// Handle new notifications
+// Handle New Notifications
 function handleNewNotification(data) {
     const notificationBadge = document.getElementById("notification-badge");
+    notifications.unshift(data); // Add new notification to the top
 
-    // Add the new notification to the list
-    notifications.unshift(data); // Add to the beginning of the array
+    updateNotificationUI(); // Refresh UI
 
-    // Update the notification badge
-    const currentCount = parseInt(notificationBadge.textContent) || 0;
-    notificationBadge.textContent = currentCount + 1;
+    // Update notification badge count
+    notificationBadge.textContent = notifications.length;
     notificationBadge.classList.remove("d-none");
 }
 
-function sendNotification(productName, stockQuantity) {
-    const staffId = getStaffId(); // Get staff ID from session
-    if (!staffId) {
-        console.error("Staff ID not found. Cannot send notification.");
+// Update the UI with notifications
+function updateNotificationUI() {
+    const notificationList = document.getElementById("notification-list");
+    notificationList.innerHTML = "";
+
+    if (notifications.length === 0) {
+        notificationList.innerHTML = `<li class="list-group-item text-muted">No notifications</li>`;
         return;
     }
 
-    fetch("/send_notification", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            product_name: productName,
-            stock_quantity: stockQuantity,
-            staff_id: staffId,  // Include staff_id in the request
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log("Notification sent:", data.message);
-        } else {
-            console.error("Error sending notification:", data.message);
-        }
-    })
-    .catch(error => console.error("Error:", error));
+    notifications.forEach(notification => {
+        const notificationItem = document.createElement("li");
+        notificationItem.className = "list-group-item";
+        notificationItem.textContent = notification.message;
+        notificationList.appendChild(notificationItem);
+    });
 }
+
+// Simulate a test notification when button is clicked (For debugging)
+function testNotification() {
+    handleNewNotification({ message: "🔔 Test Notification at " + new Date().toLocaleTimeString() });
+}
+
+
+function sendNotification(productName, stock) {
+    // Check if the same notification already exists
+    const existingNotification = notifications.find(n => n.message.includes(productName));
+    if (existingNotification) return; // Avoid duplicates
+
+    console.log(`🔔 Low stock alert: ${productName} has only ${stock} left.`);
+
+    handleNewNotification({
+        message: `⚠️ Low stock: ${productName} (Only ${stock} left)`,
+    });
+}
+
+
 
 // Check for low-stock products and send notifications
 function checkLowStock() {
     if (!window.products || window.products.length === 0) return;
 
-    const lowStockProducts = window.products.filter(product => product.stock < 10);
+    const lowStockProducts = window.products.filter(product => product.stock > 0 && product.stock < 10);
     const staffId = getStaffId();
 
     if (!staffId) {
@@ -241,3 +234,22 @@ function checkLowStock() {
         sendNotification(product.name, product.stock);
     });
 }
+
+
+function toggleNotifications() {
+    const dialog = document.getElementById("notification-dialog");
+
+    if (!dialog) {
+        console.error("Notification dialog not found!");
+        return;
+    }
+
+    dialog.style.display = dialog.style.display === "none" || dialog.style.display === "" ? "block" : "none";
+
+    updateNotificationUI(); // Refresh notification UI when opened
+}
+
+// Ensure script runs after DOM is ready
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("JavaScript Loaded! ✅");
+});
