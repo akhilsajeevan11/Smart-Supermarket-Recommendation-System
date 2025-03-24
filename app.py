@@ -755,23 +755,23 @@ def manager():
 
 UPLOAD_FOLDER = "static/uploads"  # Ensure this matches your actual folder path
 
-@app.route("/send_notification", methods=["POST"])
+@app.route('/send_notification', methods=['POST'])
 def send_notification():
     try:
         data = request.get_json()
-        product_name = data.get("product_name")
-        stock_quantity = data.get("stock_quantity")
-        staff_id = data.get("staff_id")
+        product_name = data.get('product_name')
+        stock_quantity = data.get('stock_quantity')
+        staff_id = data.get('staff_id')  # Get staff_id from request body
 
         if not product_name or not stock_quantity or not staff_id:
             return jsonify({"success": False, "message": "Missing required fields"}), 400
 
-        # Insert notification into StockTracking table
         message = f"Low stock alert: {product_name} (Quantity: {stock_quantity})"
         insert_query = """
             INSERT INTO StockTracking (product_name, stock_quantity, message, staff_id)
             VALUES (%s, %s, %s, %s)
         """
+
         with Db() as db:
             db.execute(insert_query, (product_name, stock_quantity, message, staff_id))
             db.commit()
@@ -820,8 +820,13 @@ def staff():
             else:
                 product["image_url"] = f"/static/uploads/{filename}"
 
-        # Render the template with products and notifications
-        return render_template("staff/index.html", products=products, notifications=notifications)
+        # Render the template with products, notifications, and staff_id
+        return render_template(
+            "staff/index.html",
+            products=products,
+            notifications=notifications,
+            staff_id=session.get('staff_id')  # Pass staff_id to the template
+        )
 
     except Exception as e:
         print(f"⚠️ Error fetching products: {e}")
@@ -974,24 +979,40 @@ def handle_add_product(data):
 @app.route('/delete_product/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
     try:
-        staff_id = session.get('staff_id')
+        data = request.get_json()  # Get JSON data from request
+        staff_id = data.get('staff_id')  # Get staff_id from request body
+        
         if not staff_id:
-            return jsonify({"success": False, "message": "Staff ID not found in session"}), 400
+            return jsonify({"success": False, "message": "Staff ID not found in request"}), 400
 
         # ✅ Update the InventoryLog first
         update_response = update_inventory_log(product_id)
-        if not update_response.json["success"]:
-            return update_response  # Return the error response from update_inventory_log
 
-        # ✅ Delete the product after updating the log
-        delete_product_from_db(product_id, staff_id)
+        # Ensure update_response is a valid JSON response
+        if isinstance(update_response, tuple):  # If it's a tuple, extract the values
+            success, message = update_response
+            if not success:
+                return jsonify({"success": False, "message": message}), 400
 
-        socketio.emit('product_deleted', {'product_id': product_id})  # WebSocket Emit
-        return jsonify({"success": True, "message": "Product deleted and inventory log updated"}), 200
+        elif isinstance(update_response, dict):  # If it’s a dict, handle normally
+            if not update_response.get("success"):
+                return jsonify(update_response), 400
 
+        else:  # Handle unexpected cases
+            return jsonify({"success": False, "message": "Unexpected response from update_inventory_log"}), 500
+
+        # ✅ Emit product deletion event to the frontend
+        socketio.emit('product_deleted', {'product_id': product_id})
+
+        return jsonify({"success": True, "message": "Inventory log updated successfully"}), 200
+
+    except ValueError as e:
+        print(f"Error deleting product: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
         print(f"Error deleting product: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
+
 
 
 
@@ -1007,9 +1028,12 @@ def handle_delete_product(data):
 
         delete_product_from_db(product_id, staff_id)
         socketio.emit('product_deleted', {'product_id': product_id})
-    except Exception as e:
+    except ValueError as e:
         print(f"Error deleting product: {str(e)}")
         socketio.emit('error', {'message': str(e)})
+    except Exception as e:
+        print(f"Error deleting product: {str(e)}")
+        socketio.emit('error', {'message': "Internal server error"})
 
 
 def delete_product_from_db(product_id, staff_id):
@@ -1019,6 +1043,17 @@ def delete_product_from_db(product_id, staff_id):
 
     with Db() as db:
         try:
+            # ✅ Check for dependencies in other tables
+            cursor = db.connection.cursor()
+            cursor.execute("SELECT COUNT(*) FROM Cart WHERE product_id = %s", (product_id,))
+            cart_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM PurchaseDetail WHERE product_id = %s", (product_id,))
+            purchase_count = cursor.fetchone()[0]
+
+            if cart_count > 0 or purchase_count > 0:
+                raise ValueError("Product cannot be deleted as it is referenced in other tables")
+
             # ✅ Fetch the product image path before deletion
             image_result = db.selectOne(select_image_query, (product_id,))
 
@@ -1264,6 +1299,7 @@ def update_inventory_log(product_id):
     try:
         staff_id = session.get('staff_id')
         if not staff_id:
+            print("⚠️ Staff ID not found in session")  # Debugging
             return jsonify({"success": False, "message": "Staff ID not found in session"}), 400
 
         # ✅ Find the latest log entry for the product
@@ -1285,16 +1321,18 @@ def update_inventory_log(product_id):
             # ✅ Find the latest log entry
             latest_log = db.selectOne(find_latest_log_query, (product_id,))
             if not latest_log:
+                print(f"⚠️ No log entry found for product {product_id}")  # Debugging
                 return jsonify({"success": False, "message": "No log entry found for the product"}), 404
 
             # ✅ Update the latest log entry
             db.execute(update_inventory_log_query, (latest_log["log_id"],))
             db.commit()
+            print(f"✅ Inventory log updated for product {product_id}")  # Debugging
 
         return jsonify({"success": True, "message": "Inventory log updated successfully"})
 
     except Exception as e:
-        print(f"❌ Error updating inventory log: {str(e)}")
+        print(f"❌ Error updating inventory log: {str(e)}")  # Debugging
         return jsonify({"success": False, "message": str(e)}), 500
 
 @app.route("/notify_staff", methods=["POST"])
