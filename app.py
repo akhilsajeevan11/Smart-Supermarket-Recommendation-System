@@ -246,13 +246,15 @@ def login():
                     if not manager:
                         return jsonify({"success": False, "error": "Manager record not found"}), 404
                     session['manager_id'] = manager['manager_id']  # Add manager_id to session
+                    print(f"✅ Manager ID set in session: {manager['manager_id']}")  # Debugging
 
                 # Validate credentials for all users
                 if user and user['password'] == password:
                     session.clear() 
                     session.update({
                         'user_id': user['user_id'],
-                        'role': user['role']
+                        'role': user['role'],
+                        'manager_id': manager['manager_id'] if user['role'] == 'Manager' else None  # ✅ Ensure manager_id is set
                     })
                     session.modified = True
                     print("Session after login:", dict(session))  # Debugging
@@ -727,11 +729,8 @@ def handle_notify_staff(data):
 @app.route('/manager')
 def manager():
     if 'manager_id' not in session:  # Check if manager is logged in
+        print("⚠️ Manager ID not found in session. Redirecting to login.")  # Debugging
         return redirect(url_for('login'))
-
-    # if 'user_id' not in session or session.get('role') != 'Manager':
-    #     print("Unauthorized access to /manager. Redirecting to login.")  # Debugging
-    #     return redirect(url_for('login'))
 
     try:
         # Fetch products with stock quantity below 10
@@ -755,32 +754,47 @@ def manager():
 
 UPLOAD_FOLDER = "static/uploads"  # Ensure this matches your actual folder path
 
+
+
 @app.route('/send_notification', methods=['POST'])
 def send_notification():
     try:
         data = request.get_json()
         product_name = data.get('product_name')
         stock_quantity = data.get('stock_quantity')
-        staff_id = data.get('staff_id')  # Get staff_id from request body
+        staff_id = data.get('staff_id')
 
-        if not product_name or not stock_quantity or not staff_id:
+        print(f"📢 Received notification request: {data}")  # ✅ Debugging
+
+        if not product_name or not stock_quantity:
             return jsonify({"success": False, "message": "Missing required fields"}), 400
 
+        # ✅ Ensure `staff_id` is valid
+        if staff_id is None or not str(staff_id).isdigit():
+            print("❌ Invalid staff_id received:", staff_id)
+            return jsonify({"success": False, "message": "Invalid staff ID"}), 400
+        
+        staff_id = int(staff_id)  # Convert to integer safely
+
         message = f"Low stock alert: {product_name} (Quantity: {stock_quantity})"
-        insert_query = """
-            INSERT INTO StockTracking (product_name, stock_quantity, message, staff_id)
-            VALUES (%s, %s, %s, %s)
-        """
 
         with Db() as db:
-            db.execute(insert_query, (product_name, stock_quantity, message, staff_id))
+            db.execute(
+                "INSERT INTO StockTracking (product_name, stock_quantity, message, staff_id) VALUES (%s, %s, %s, %s)",
+                (product_name, stock_quantity, message, staff_id)
+            )
             db.commit()
 
+        # ✅ Emit event for real-time update
+        socketio.emit('new_notification', {"message": message})
+
+        print(f"✅ Notification inserted: {message}")  # ✅ Debugging
         return jsonify({"success": True, "message": "Notification sent successfully"})
 
     except Exception as e:
-        print(f"Error sending notification: {str(e)}")
+        print(f"❌ Error sending notification: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
+
 
 
 @app.route("/staff")
@@ -796,6 +810,7 @@ def staff():
             product_query = """
                 SELECT product_id, product_name, category_id, price, stock_quantity, image_url
                 FROM Product
+                WHERE stock_quantity > 0
             """
             products = db.select(product_query)
 
@@ -975,42 +990,32 @@ def handle_add_product(data):
         socketio.emit('error', {'message': str(e)})
 
 
-
 @app.route('/delete_product/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
+    data = request.get_json()
+    staff_id = data.get('staff_id')
+
+    if not staff_id:
+        return jsonify({"success": False, "message": "Staff ID is missing"}), 400
+
     try:
-        data = request.get_json()  # Get JSON data from request
-        staff_id = data.get('staff_id')  # Get staff_id from request body
-        
-        if not staff_id:
-            return jsonify({"success": False, "message": "Staff ID not found in request"}), 400
+        with Db() as db:
+            # Check if the product exists
+            product = db.selectOne("SELECT * FROM Product WHERE product_id = %s", (product_id,))
+            if not product:
+                return jsonify({"success": False, "message": "Product not found"}), 404
 
-        # ✅ Update the InventoryLog first
-        update_response = update_inventory_log(product_id)
+            # Execute the DELETE operation
+            rows_deleted = db.execute("DELETE FROM Product WHERE product_id = %s", (product_id,))
+            if rows_deleted == 0:
+                return jsonify({"success": False, "message": "Failed to delete product"}), 500
 
-        # Ensure update_response is a valid JSON response
-        if isinstance(update_response, tuple):  # If it's a tuple, extract the values
-            success, message = update_response
-            if not success:
-                return jsonify({"success": False, "message": message}), 400
+            db.commit()  # ✅ Commit the transaction
 
-        elif isinstance(update_response, dict):  # If it’s a dict, handle normally
-            if not update_response.get("success"):
-                return jsonify(update_response), 400
+        return jsonify({"success": True, "message": "Product deleted successfully"})
 
-        else:  # Handle unexpected cases
-            return jsonify({"success": False, "message": "Unexpected response from update_inventory_log"}), 500
-
-        # ✅ Emit product deletion event to the frontend
-        socketio.emit('product_deleted', {'product_id': product_id})
-
-        return jsonify({"success": True, "message": "Inventory log updated successfully"}), 200
-
-    except ValueError as e:
-        print(f"Error deleting product: {str(e)}")
-        return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
-        print(f"Error deleting product: {str(e)}")
+        logging.error(f"Error deleting product: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 
