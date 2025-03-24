@@ -98,20 +98,32 @@ function addProductToUI(product) {
 }
 
 function deleteProduct(product_id) {
-    console.log("Deleting product:", product_id);  // ✅ Debugging statement
+    const staffId = getStaffId(); // Get staff ID from session
+    if (!staffId) {
+        console.error("Staff ID not found. Cannot delete product.");
+        alert("Staff ID not found. Please log in again.");
+        return;
+    }
 
-    fetch(`/delete_product/${product_id}`, { method: "DELETE" })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                removeProductFromUI(product_id);
-                socket.emit("product_deleted", { product_id }); // ✅ Emit deletion event
-                console.log("Product deleted successfully:", product_id);
-            } else {
-                console.error("Error deleting product:", data.message);
-            }
-        })
-        .catch(error => console.error("Error:", error));
+    fetch(`/delete_product/${product_id}`, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ staff_id: staffId }) // Include staff_id in the request
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            removeProductFromUI(product_id);
+            socket.emit("product_deleted", { product_id });
+            console.log("Product deleted successfully:", product_id);
+        } else {
+            console.error("Error deleting product:", data.message);
+            alert("Error deleting product: " + data.message);
+        }
+    })
+    .catch(error => console.error("Error:", error));
 }
 
 // Remove product from UI
@@ -184,8 +196,13 @@ function handleNewNotification(data) {
     notificationBadge.classList.remove("d-none");
 }
 
-// Send a notification
-function sendNotification(productName, stockQuantity, staffId) {
+function sendNotification(productName, stockQuantity) {
+    const staffId = getStaffId(); // Get staff ID from session
+    if (!staffId) {
+        console.error("Staff ID not found. Cannot send notification.");
+        return;
+    }
+
     fetch("/send_notification", {
         method: "POST",
         headers: {
@@ -194,7 +211,7 @@ function sendNotification(productName, stockQuantity, staffId) {
         body: JSON.stringify({
             product_name: productName,
             stock_quantity: stockQuantity,
-            staff_id: staffId,
+            staff_id: staffId,  // Include staff_id in the request
         }),
     })
     .then(response => response.json())
@@ -215,7 +232,12 @@ function checkLowStock() {
     const lowStockProducts = window.products.filter(product => product.stock < 10);
     const staffId = getStaffId();
 
+    if (!staffId) {
+        console.error("Staff ID not found. Cannot send notifications.");
+        return;
+    }
+
     lowStockProducts.forEach(product => {
-        sendNotification(product.name, product.stock, staffId);
+        sendNotification(product.name, product.stock);
     });
 }
