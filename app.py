@@ -1613,7 +1613,7 @@ def debug_session():
 @app.route('/protected')
 def protected():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for(''))
     return "This is a protected page."
 
 @app.after_request
