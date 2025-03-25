@@ -1,11 +1,10 @@
 document.addEventListener("DOMContentLoaded", function () {
   initPreloader();
-  initWishlist()
+  initWishlist();
   initSwipers();
   initCart();
-  // initProductQty();
+  initProductQty();
   initCheckout();
-
 });
 
 // ✅ Preloader Initialization
@@ -352,3 +351,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 });
+
+function initProductQty() {
+  document.querySelectorAll(".quantity-left-minus, .quantity-right-plus").forEach(button => {
+    button.addEventListener("click", function () {
+      const input = this.closest(".input-group").querySelector(".input-number");
+      let quantity = parseInt(input.value);
+
+      if (this.classList.contains("quantity-left-minus")) {
+        // Decrease quantity (minimum 1)
+        quantity = Math.max(1, quantity - 1);
+      } else if (this.classList.contains("quantity-right-plus")) {
+        // Increase quantity
+        quantity += 1;
+      }
+
+      input.value = quantity; // Update the input value
+    });
+  });
+}
