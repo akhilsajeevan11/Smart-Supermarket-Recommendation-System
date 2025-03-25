@@ -370,3 +370,16 @@ function initProductQty() {
     });
   });
 }
+
+// Redirect to login page if the user tries to navigate back/forward after logout
+window.addEventListener('popstate', function (event) {
+  // Check if the user is logged out
+  fetch('/check-session')
+    .then(response => response.json())
+    .then(data => {
+      if (!data.loggedIn) {
+        // Redirect to the login page
+        window.location.href = '/';
+      }
+    });
+});
