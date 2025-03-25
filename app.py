@@ -167,7 +167,9 @@ def allowed_file(filename):
 
 @app.route('/')
 def main():
-    return render_template("login/login.html")
+    if 'user_id' in session:  # Check if the user is logged in
+        return redirect(url_for('home'))  # Redirect to the home page
+    return render_template("login/login.html")  # Render the login page
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -1095,8 +1097,9 @@ def delete_product_from_db(product_id, staff_id):
 
 @app.route('/logout')
 def logout():
-    """Logs the user out and clears the session."""
+    # Clear the session
     session.clear()
+    # Redirect to the login page
     return redirect(url_for('login'))
 
 
@@ -1585,11 +1588,18 @@ def add_to_cart():
     
 
 
+# @app.route('/check-session')
+# def check_session():
+#     customer_id = session.get('customer_id')
+#     print(f"🧐 Checking session: customer_id={customer_id}")  # Debugging
+#     return jsonify({'customer_id': customer_id})
+
+
 @app.route('/check-session')
 def check_session():
-    customer_id = session.get('customer_id')
-    print(f"🧐 Checking session: customer_id={customer_id}")  # Debugging
-    return jsonify({'customer_id': customer_id})
+    # Check if the user is logged in
+    logged_in = 'user_id' in session
+    return jsonify({'loggedIn': logged_in})
 
 
 @app.route('/debug-session')
@@ -1600,6 +1610,19 @@ def debug_session():
         "role": session.get('role')
     })
 
+@app.route('/protected')
+def protected():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return "This is a protected page."
+
+@app.after_request
+def add_cache_control(response):
+    # Add headers to prevent caching
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
