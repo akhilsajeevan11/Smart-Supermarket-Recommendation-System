@@ -76,7 +76,7 @@ except Exception as e:
 try:
     with open(PICKLE_PATH, "rb") as file:
         model_data = pickle.load(file)
-    print("✅ Model data loaded successfully!")
+    print("✅ Model data loaded successfully!",model_data)
 except Exception as e:
     print(f"❌ Error loading model file: {str(e)}")
     model_data = {}
@@ -173,12 +173,15 @@ def main():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        data = request.get_json()
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '')
-        print("Email received:", email)
-        
         try:
+            data = request.get_json()  # Get JSON data from the request
+            if not data:
+                return jsonify({"success": False, "error": "No data provided"}), 400
+
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
+            print("Email received:", email)
+
             # Validate email and password
             if not email or not password:
                 return jsonify({"success": False, "error": "Email and password required"}), 400
@@ -236,6 +239,7 @@ def login():
                     if not staff:
                         return jsonify({"success": False, "error": "Staff record not found"}), 404
                     session['staff_id'] = staff['staff_id']  # Add staff_id to session
+                    print(f"✅ Staff ID set in session: {staff['staff_id']}")  # Debugging
 
                 # If user is a manager, ensure they exist in the Manager table
                 if user and user['role'] == 'Manager':
@@ -254,7 +258,8 @@ def login():
                     session.update({
                         'user_id': user['user_id'],
                         'role': user['role'],
-                        'manager_id': manager['manager_id'] if user['role'] == 'Manager' else None  # ✅ Ensure manager_id is set
+                        'staff_id': staff['staff_id'] if user['role'] == 'Staff' else None,  # ✅ Set staff_id only for staff
+                        'manager_id': manager['manager_id'] if user['role'] == 'Manager' else None  # ✅ Set manager_id only for managers
                     })
                     session.modified = True
                     print("Session after login:", dict(session))  # Debugging
@@ -385,14 +390,14 @@ def similar_products():
                     db.connection.commit()
                     print(f"✅ Inserted missing category with ID {category_id}")
 
-                # 🔴 Insert product now that category exists
-                cursor.execute("""
-                    INSERT INTO Product (product_id, product_name, category_id, price, stock_quantity)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (product["product_id"], product["product_name"], category_id, 0.0, 0))
+                # # 🔴 Insert product now that category exists
+                # cursor.execute("""
+                #     INSERT INTO Product (product_id, product_name, category_id, price, stock_quantity)
+                #     VALUES (%s, %s, %s, %s, %s)
+                # """, (product["product_id"], product["product_name"], category_id, 0.0, 0))
 
-                valid_product_ids.append(product["product_id"])
-                print(f"✅ Inserted missing product: {product['product_name']} (ID: {product['product_id']})")
+                # valid_product_ids.append(product["product_id"])
+                # print(f"✅ Inserted missing product: {product['product_name']} (ID: {product['product_id']})")
 
             # ✅ Insert Recommendations
             for product_id in valid_product_ids:
@@ -737,7 +742,7 @@ def manager():
         low_stock_query = """
         SELECT product_id, product_name, stock_quantity
         FROM Product
-        WHERE stock_quantity < 10 AND stock_quantity > 0
+        WHERE stock_quantity < 5 AND stock_quantity > 0
         """
         with Db() as db:
             low_stock_products = db.select(low_stock_query)
@@ -799,10 +804,15 @@ def send_notification():
 
 @app.route("/staff")
 def staff():
-    # Check if user is logged in and has the role of Staff
-    if 'user_id' not in session or session.get('role') != 'Staff':
-        print("Unauthorized access to /staff. Redirecting to login.")  # Debugging
+    # # Check if user is logged in and has the role of Staff
+    # if 'user_id' not in session or session.get('role') != 'Staff':
+    #     print("Unauthorized access to /staff. Redirecting to login.")  # Debugging
+    #     return redirect(url_for('staff'))
+
+    if 'manager_id' not in session:  # Check if manager is logged in
+        print("⚠️ Manager ID not found in session. Redirecting to login.")  # Debugging
         return redirect(url_for('login'))
+
 
     try:
         with Db() as db:
@@ -1271,12 +1281,20 @@ def checkout():
             transaction_id = cursor.lastrowid  # Get the inserted transaction ID
             db.connection.commit()
 
-            # ✅ Insert purchase details
+            # ✅ Insert purchase details and update stock quantity
             for item in cart_items:
+                # Insert purchase details
                 cursor.execute("""
                     INSERT INTO PurchaseDetail (transaction_id, product_id, quantity, sub_total)
                     VALUES (%s, %s, %s, %s)
                 """, (transaction_id, item["product_id"], item["quantity"], item["amount"] * item["quantity"]))
+
+                # Update stock quantity in the Product table
+                cursor.execute("""
+                    UPDATE Product
+                    SET stock_quantity = stock_quantity - %s
+                    WHERE product_id = %s
+                """, (item["quantity"], item["product_id"]))
 
             db.connection.commit()
 
