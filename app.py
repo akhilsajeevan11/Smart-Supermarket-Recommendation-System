@@ -19,7 +19,8 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 import razorpay
-
+import joblib
+from fuzzywuzzy import process
 
 
 
@@ -27,20 +28,7 @@ UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 load_dotenv()
-# model_path = os.getenv('MODEL_PATH')
 
-# # Load the pre-trained model from the pickle file
-# def load_model(model_path):
-#     try:
-#         with open(model_path, 'rb') as file:
-#             model = pickle.load(file)
-#         return model
-#     except Exception as e:
-#         print(f"Error loading model: {str(e)}")
-#         return None
-
-# # Load the model
-# model = load_model(model_path)  # ✅ Load the model, not just the path
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') 
@@ -54,68 +42,59 @@ Session(app)
 
 
 
-PRODUCTS_PATH = os.getenv("PRODUCTS_PATH")
-ORDERS_PATH = os.getenv("ORDERS_PATH")
-PICKLE_PATH = os.getenv("PICKLE_PATH")
+# PRODUCTS_PATH = os.getenv("PRODUCTS_PATH")
+# ORDERS_PATH = os.getenv("ORDERS_PATH")
+# PICKLE_PATH = os.getenv("PICKLE_PATH")
 
 
+# ✅ Define Paths
+MODEL_PATH = "/home/alignminds/Desktop/Akhil/Project/XGB_Model.joblib"
+PRODUCTS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/products.csv"
+ORDERS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/orders.csv"
 
-# ✅ Load Datasets
+# ✅ Load XGBoost Model (ONLY MODEL)
+try:
+    model = joblib.load(MODEL_PATH)
+    print("✅ Model Loaded Successfully!")
+except Exception as e:
+    print(f"❌ Error loading model: {str(e)}")
+    model = None
+
+
+# ✅ Load Products & Orders Data
 try:
     products = pd.read_csv(PRODUCTS_PATH)
-    orders = pd.read_csv(ORDERS_PATH)
+    order_products_prior = pd.read_csv(ORDERS_PATH)
     print(f"✅ Products Loaded: {len(products)} rows")
-    print(f"✅ Orders Loaded: {len(orders)} rows")
+    print(f"✅ Orders Loaded: {len(order_products_prior)} rows")
 except Exception as e:
     print(f"❌ Error loading CSV files: {str(e)}")
     products = pd.DataFrame()
-    orders = pd.DataFrame()
+    order_products_prior = pd.DataFrame()
 
-
-# ✅ Load the Pickle File
-try:
-    with open(PICKLE_PATH, "rb") as file:
-        model_data = pickle.load(file)
-    print("✅ Model data loaded successfully!",model_data)
-except Exception as e:
-    print(f"❌ Error loading model file: {str(e)}")
-    model_data = {}
-
-
-
-# ✅ Load the pickle file
-try:
-    with open("/home/alignminds/Desktop/Akhil/Project/Model/recommendation_system.pkl", "rb") as file:
-        model_data = pickle.load(file)
-
-    print("✅ Model data loaded successfully!")
-
-except Exception as e:
-    print(f"❌ Error loading model file: {str(e)}")
-    model_data = {}
-
-# ✅ Extract components
-products = model_data.get("products", pd.DataFrame())
-order_products_prior = model_data.get("order_products_prior", pd.DataFrame())
-vectorizer = model_data.get("vectorizer", None)
-product_tfidf_matrix = model_data.get("product_tfidf_matrix", None)
-
-# ✅ Ensure the model is loaded properly
-if "model" in model_data:
-    model = model_data["model"]
-    print("✅ Recommendation model loaded successfully!")
+# ✅ Initialize Vectorizer (TF-IDF) for Similar Products
+if not products.empty and "product_name" in products.columns:
+    vectorizer = TfidfVectorizer()
+    product_tfidf_matrix = vectorizer.fit_transform(products["product_name"])
 else:
-    print("🚨 Error: Model is missing in the pickle file! Please retrain and save it.")
-    model = None  # Prevent errors
+    vectorizer = None
+    product_tfidf_matrix = None
 
-# ✅ Function to find complementary products
+
+
+
+
+# ✅ Function to Find Complementary Products
 def find_complementary_products(product_id, top_n=5):
     """Find complementary products based on co-purchase frequency."""
     if order_products_prior.empty:
-        return pd.DataFrame()  # Return empty if no order data
+        return pd.DataFrame()
+
+    # ✅ Ensure product ID exists
+    if product_id not in order_products_prior["product_id"].values:
+        return pd.DataFrame()
 
     orders_with_product = order_products_prior[order_products_prior['product_id'] == product_id]['order_id'].unique()
-
     complementary_products = order_products_prior[
         (order_products_prior['order_id'].isin(orders_with_product)) & 
         (order_products_prior['product_id'] != product_id)
@@ -129,20 +108,41 @@ def find_complementary_products(product_id, top_n=5):
 
     return result[['product_id', 'product_name', 'co_occurrence_count']]
 
-# ✅ Function to find similar products (TF-IDF Content-based)
+
+
+
 def find_similar_products(product_name, top_n=5):
-    """Find similar products based on TF-IDF content similarity."""
+    """Find similar products based on TF-IDF content similarity with fuzzy matching."""
     if vectorizer is None or product_tfidf_matrix is None:
-        print("🚨 Vectorizer or TF-IDF matrix is missing!")
         return pd.DataFrame()
 
-    query_vector = vectorizer.transform([product_name])
-    cosine_sim = cosine_similarity(query_vector, product_tfidf_matrix).flatten()
+    if products.empty or "product_name" not in products.columns:
+        return pd.DataFrame()
 
+    # ✅ Use fuzzy matching to find closest match
+    fuzzy_result = process.extractOne(product_name, products["product_name"])
+
+    # ✅ Ensure valid match was found
+    if not fuzzy_result or not isinstance(fuzzy_result, tuple) or len(fuzzy_result) < 2:
+        print(f"❌ No valid match found for '{product_name}'")
+        return pd.DataFrame()
+
+    # ✅ Safely unpack only first two values
+    closest_match, score = fuzzy_result[:2]  
+    print(f"🔍 Closest match for '{product_name}': {closest_match} (Score: {score})")
+
+    if score < 70:  # Ignore if match confidence is too low
+        print(f"⚠️ Match score too low ({score}) for '{product_name}', returning empty")
+        return pd.DataFrame()
+
+    # ✅ Perform similarity search on matched product
+    query_vector = vectorizer.transform([closest_match])
+    cosine_sim = cosine_similarity(query_vector, product_tfidf_matrix).flatten()
     similar_indices = cosine_sim.argsort()[-top_n:][::-1]
     similar_products = products.iloc[similar_indices]
 
     return similar_products[["product_id", "product_name"]]
+
 
 
 
@@ -334,10 +334,6 @@ def get_sales_data():
  
 
 
-
-
-
-
 @app.route('/similar_products', methods=['POST'])
 def similar_products():
     try:
@@ -354,7 +350,7 @@ def similar_products():
         # ✅ Fetch Similar Products
         similar_items = find_similar_products(product_name, top_n=5)
 
-        if similar_items.empty:
+        if similar_items is None or similar_items.empty:
             print("⚠️ No similar products found!")
             return jsonify({"success": False, "message": "No similar products found"}), 404
 
@@ -366,50 +362,50 @@ def similar_products():
             valid_product_ids = []
             missing_products = []  # Track missing products
 
-            for _, row in similar_items.iterrows():
-                cursor.execute("SELECT product_id FROM Product WHERE product_id = %s", (row["product_id"],))
-                product_exists = cursor.fetchone()
+            # ✅ Check if recommended products exist in DB
+            product_ids = similar_items["product_id"].tolist()
+            if product_ids:
+                format_strings = ','.join(['%s'] * len(product_ids))
+                cursor.execute(f"SELECT product_id FROM Product WHERE product_id IN ({format_strings})", tuple(product_ids))
+                existing_products = {row["product_id"] for row in cursor.fetchall()}
 
-                if product_exists:
-                    valid_product_ids.append(row["product_id"])
-                else:
-                    missing_products.append(row)
+                for _, row in similar_items.iterrows():
+                    if row["product_id"] in existing_products:
+                        valid_product_ids.append(row["product_id"])
+                    else:
+                        missing_products.append(row)
 
-            # ✅ Ensure a valid category exists before inserting missing products
-            for product in missing_products:
-                category_id = 1  # Default category
-
-                # 🔍 Check if the category exists
-                cursor.execute("SELECT category_id FROM Category WHERE category_id = %s", (category_id,))
+            # ✅ Insert missing products with a default category
+            if missing_products:
+                cursor.execute("SELECT category_id FROM Category WHERE category_id = %s", (1,))
                 category_exists = cursor.fetchone()
 
                 if not category_exists:
-                    print(f"⚠️ Category {category_id} does not exist, inserting default category...")
-                    cursor.execute("""
-                        INSERT INTO Category (category_id, category_name)
-                        VALUES (%s, %s)
-                    """, (category_id, "General"))
+                    print("⚠️ Default category does not exist, inserting...")
+                    cursor.execute("INSERT INTO Category (category_id, category_name) VALUES (%s, %s)", (1, "General"))
                     db.connection.commit()
-                    print(f"✅ Inserted missing category with ID {category_id}")
+                    print("✅ Inserted default category")
 
-                # # 🔴 Insert product now that category exists
-                # cursor.execute("""
-                #     INSERT INTO Product (product_id, product_name, category_id, price, stock_quantity)
-                #     VALUES (%s, %s, %s, %s, %s)
-                # """, (product["product_id"], product["product_name"], category_id, 0.0, 0))
+                for product in missing_products:
+                    cursor.execute("""
+                        INSERT INTO Product (product_id, product_name, category_id, price, stock_quantity)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (product["product_id"], product["product_name"], 1, 0.0, 0))
+                    valid_product_ids.append(product["product_id"])
+                    print(f"✅ Inserted missing product: {product['product_name']} (ID: {product['product_id']})")
 
-                # valid_product_ids.append(product["product_id"])
-                # print(f"✅ Inserted missing product: {product['product_name']} (ID: {product['product_id']})")
+                db.connection.commit()
 
-            # ✅ Insert Recommendations
-            for product_id in valid_product_ids:
-                cursor.execute("""
+            # ✅ Insert recommendations for user
+            if valid_product_ids:
+                recommendation_values = [(customer_id, product_id, 'Collaborative') for product_id in valid_product_ids]
+                cursor.executemany("""
                     INSERT INTO Recommendation (customer_id, product_id, recommendation_type)
-                    VALUES (%s, %s, 'Collaborative')
-                """, (customer_id, product_id))
+                    VALUES (%s, %s, %s)
+                """, recommendation_values)
+                db.connection.commit()
 
-            db.connection.commit()
-            print("✅ Recommendations inserted successfully!")
+                print("✅ Recommendations inserted successfully!")
 
         return jsonify({"success": True, "similar_products": similar_items.to_dict(orient="records")})
 
@@ -421,7 +417,7 @@ def similar_products():
 
 
 
-# ✅ API Endpoint: Get Complementary Products
+# ✅ API: Find Complementary Products
 @app.route('/complementary_products', methods=['POST'])
 def complementary_products():
     try:
@@ -439,29 +435,41 @@ def complementary_products():
         return jsonify({"success": True, "complementary_products": complementary_items.to_dict(orient="records")})
 
     except Exception as e:
-        print(f"❌ Error in /complementary_products: {str(e)}")
         traceback.print_exc()
         return jsonify({"success": False, "message": str(e)}), 500
 
-
-# ✅ Function to Find Similar Products by ID (Modified)
 def find_similar_products_by_id(product_id, top_n=5):
     """Find similar products based on a product ID using TF-IDF."""
-    product_info = products[products["product_id"] == product_id]
+    product_info = products.loc[products['product_id'] == product_id, 'product_name']
     if product_info.empty:
         return []
 
-    product_name = product_info.iloc[0]["product_name"]
+    product_name = product_info.values[0]
     similar_products = find_similar_products(product_name, top_n)
 
     return similar_products.to_dict(orient="records")
 
 
+
+
+# # ✅ Function to Find Similar Products by ID (Modified)
+# def find_similar_products_by_id(product_id, top_n=5):
+#     """Find similar products based on a product ID using TF-IDF."""
+#     product_info = products[products["product_id"] == product_id]
+#     if product_info.empty:
+#         return []
+
+#     product_name = product_info.iloc[0]["product_name"]
+#     similar_products = find_similar_products(product_name, top_n)
+
+#     return similar_products.to_dict(orient="records")
+
+
+# ✅ API: Recommend Products Based on User's Products
 @app.route('/recommend', methods=['POST'])
 def recommend():
     try:
         data = request.get_json()
-        print(f"📩 Received request data: {data}")
 
         if not data or "user_id" not in data or "products" not in data:
             return jsonify({"success": False, "message": "Missing required fields (user_id, products)"}), 400
@@ -472,11 +480,8 @@ def recommend():
         if not isinstance(product_list, list) or not product_list:
             return jsonify({"success": False, "message": "Products should be a non-empty list"}), 400
 
-        print(f"🔹 User ID: {user_id}, Products: {product_list}")
-
+        # ✅ Convert product names to product IDs
         product_ids = []
-        
-        # Check if product_list contains names or IDs
         for product in product_list:
             if isinstance(product, int):  # If product is already an ID
                 product_ids.append(product)
@@ -488,19 +493,14 @@ def recommend():
         if not product_ids:
             return jsonify({"success": False, "message": "No valid product IDs found"}), 404
 
-        print(f"🔹 Found Product IDs: {product_ids}")
-
-        # Collect recommendations for each product in the cart
+        # ✅ Collect recommendations
         all_recommendations = []
         for pid in product_ids:
-            similar_items = find_similar_products_by_id(pid, top_n=3)  # Get 3 recommendations per product
-            all_recommendations.extend(similar_items)
+            similar_items = find_similar_products(products.loc[products['product_id'] == pid, 'product_name'].values[0], top_n=3)
+            all_recommendations.extend(similar_items.to_dict(orient="records"))
 
-        # Remove duplicates
+        # ✅ Remove duplicates
         unique_recommendations = {rec["product_id"]: rec for rec in all_recommendations}.values()
-
-        if not unique_recommendations:
-            return jsonify({"success": False, "message": "No recommendations found"}), 404
 
         return jsonify({
             "success": True,
@@ -508,7 +508,6 @@ def recommend():
         })
 
     except Exception as e:
-        print(f"❌ Error generating recommendations: {str(e)}")
         traceback.print_exc()
         return jsonify({"success": False, "message": str(e)}), 500
 
