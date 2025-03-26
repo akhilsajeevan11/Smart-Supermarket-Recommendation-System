@@ -134,3 +134,7 @@ async function createUser() {
             `<div class="alert alert-danger">An error occurred. Please try again.</div>`;
     }
 }
+window.history.pushState(null, "", window.location.href);
+window.onpopstate = function () {
+  window.history.pushState(null, "", window.location.href);
+};
