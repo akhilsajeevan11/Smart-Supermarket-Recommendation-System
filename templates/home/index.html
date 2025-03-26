@@ -135,63 +135,122 @@
     
     
     <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="offcanvasSearch" aria-labelledby="Search">
-      <div class="offcanvas-header justify-content-center">
+      <div class="offcanvas-header justify-content-start">
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">
         <div class="order-md-last">
-          <h4 class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-primary">Search</span>
-          </h4>
-          <form role="search" action="index.html" method="get" class="d-flex mt-3 gap-0">
-            <input class="form-control rounded-start rounded-0 bg-light" type="email" placeholder="What are you looking for?" aria-label="What are you looking for?">
-            <button class="btn btn-dark rounded-end rounded-0" type="submit">Search</button>
-          </form>
+          <div class="dropdown w-100">
+            
+            <button class="btn dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                🛍️ Shop by Departments
+              </button>
+      
+            <ul class="dropdown-menu w-100">
+              <li class="dropdown-submenu">
+                <a class="dropdown-item" href="#frozen">❄️ Frozen</a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">🥩 Frozen Meat & Seafood</a></li>
+                  <li><a class="dropdown-item" href="#">🌱 Frozen Vegan & Vegetarian</a></li>
+                  <li><a class="dropdown-item" href="#">🍞 Frozen Breads & Doughs</a></li>
+                  <li><a class="dropdown-item" href="#">🥞 Frozen Breakfast</a></li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu">
+                <a class="dropdown-item" href="#bakery">🍞 Bakery</a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">🍰 Bakery Desserts</a></li>
+                  <li><a class="dropdown-item" href="#">🥖 Buns & Rolls</a></li>
+                  <li><a class="dropdown-item" href="#">🥐 Breakfast Bakery</a></li>
+                  <li><a class="dropdown-item" href="#">🍞 Bread</a></li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu">
+                <a class="dropdown-item" href="#dairy-eggs">🥚 Dairy & Eggs</a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">🥛 Milk</a></li>
+                  <li><a class="dropdown-item" href="#">🥚 Eggs</a></li>
+                  <li><a class="dropdown-item" href="#">🧈 Butter</a></li>
+                  <li><a class="dropdown-item" href="#">🍦 Yogurt</a></li>
+                  <li><a class="dropdown-item" href="#">🧀 Cheese</a></li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu">
+                <a class="dropdown-item" href="#beverages">🥤 Beverages</a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">☕ Coffee</a></li>
+                  <li><a class="dropdown-item" href="#">🍵 Tea</a></li>
+                  <li><a class="dropdown-item" href="#">🥤 Soft Drinks</a></li>
+                  <li><a class="dropdown-item" href="#">🧃 Juice & Nectars</a></li>
+                  <li><a class="dropdown-item" href="#">💧 Water & Sparkling Water</a></li>
+                </ul>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
 
     <header>
       <div class="container-fluid">
-        <div class="row py-3 border-bottom  border-warning align-items-center" >
-          
+        <div class="row py-3 border-bottom border-warning align-items-center">
           <div class="col-sm-4 col-lg-3 text-center text-sm-start">
             <div class="main-logo">
-              <a href="index.html" style="text-decoration: none;">
-                 <h1 class="text-center">Smart <span style="color: orange;">SuperMarket</span></h1>
+              <a href="/home" style="text-decoration: none;">
+                <h1 class="text-center">Smart <span style="color: orange;">SuperMarket</span></h1>
               </a>
             </div>
           </div>
-          
-         <div class="col-sm-6 offset-sm-2 offset-md-0 col-lg-5 d-none d-lg-block">
-  <div class="search-bar row bg-white p-2 my-2 rounded-4 shadow-sm align-items-center">
-    <div class="col-10">
-      <form id="search-form" class="d-flex" action="index.html" method="post">
-        <input 
-          type="text" 
-          class="form-control border-0 bg-transparent px-3" 
-          placeholder="Search for more than 20,000 products" 
-          style="font-size: 1rem; outline: none; box-shadow: none;"
-        />
-      </form>
-    </div>
-    <div class="col-2 text-center">
-      <button class="btn p-2 rounded-circle  text-black" style="border: none;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M21.71 20.29L18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a1 1 0 0 0 1.42 0a1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 7-7a7 7 0 0 1-7 7Z"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-</div>
-
-          
-          <div class="col-sm-8 col-lg-4 d-flex justify-content-end gap-5 align-items-center mt-4 mt-sm-0 justify-content-center justify-content-sm-end">
-            <div class="support-box text-end d-none d-xl-block">
-              <span class="fs-6 text-muted">For Support?</span>
-              <h5 class="mb-0">+918154574120</h5>
+    
+          <div class="col-lg-6 d-none d-lg-block">
+            <div class="dropdown w-100 ">
+              <button class="btn dropdown-toggle w-100 border-0 shadow-sm " type="button" data-bs-toggle="dropdown">
+                <span style="color: rgba(128, 128, 128, 0.603);">🛍️ Shop by Departments</span>
+              </button>
+              <ul class="dropdown-menu w-100">
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item" href="#frozen">❄️ Frozen</a>
+                  <ul class="dropdown-menu w-100">
+                    <li><a class="dropdown-item" href="#">🥩 Frozen Meat & Seafood</a></li>
+                    <li><a class="dropdown-item" href="#">🌱 Frozen Vegan & Vegetarian</a></li>
+                    <li><a class="dropdown-item" href="#">🍞 Frozen Breads & Doughs</a></li>
+                    <li><a class="dropdown-item" href="#">🥞 Frozen Breakfast</a></li>
+                  </ul>
+                </li>
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item" href="#bakery">🍞 Bakery</a>
+                  <ul class="dropdown-menu w-100">
+                    <li><a class="dropdown-item" href="#">🍰 Bakery Desserts</a></li>
+                    <li><a class="dropdown-item" href="#">🥖 Buns & Rolls</a></li>
+                    <li><a class="dropdown-item" href="#">🥐 Breakfast Bakery</a></li>
+                    <li><a class="dropdown-item" href="#">🍞 Bread</a></li>
+                  </ul>
+                </li>
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item" href="#dairy-eggs">🥚 Dairy & Eggs</a>
+                  <ul class="dropdown-menu w-100">
+                    <li><a class="dropdown-item" href="#">🥛 Milk</a></li>
+                    <li><a class="dropdown-item" href="#">🥚 Eggs</a></li>
+                    <li><a class="dropdown-item" href="#">🧈 Butter</a></li>
+                    <li><a class="dropdown-item" href="#">🍦 Yogurt</a></li>
+                    <li><a class="dropdown-item" href="#">🧀 Cheese</a></li>
+                  </ul>
+                </li>
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item" href="#beverages">🥤 Beverages</a>
+                  <ul class="dropdown-menu w-100">
+                    <li><a class="dropdown-item" href="#">☕ Coffee</a></li>
+                    <li><a class="dropdown-item" href="#">🍵 Tea</a></li>
+                    <li><a class="dropdown-item" href="#">🥤 Soft Drinks</a></li>
+                    <li><a class="dropdown-item" href="#">🧃 Juice & Nectars</a></li>
+                    <li><a class="dropdown-item" href="#">💧 Water & Sparkling Water</a></li>
+                  </ul>
+                </li>
+              </ul>
             </div>
-
+          </div>
+    
+          <div class="col-sm-8 col-lg-3 d-flex justify-content-end gap-5 align-items-center mt-4 mt-sm-0 justify-content-center justify-content-sm-end">
             <ul class="d-flex justify-content-end list-unstyled m-0">
               <li class="profile-icon">
                 <a id="profile-btn" class="rounded-circle bg-light p-2 mx-1">
@@ -204,10 +263,12 @@
                     <button id="logout-btn" class="logout-btn">Logout</button>
                   </a>
                 </div>
-              </li>            
+              </li>
               <li>
-                <a   id="wishlist-btn"class="rounded-circle bg-light p-2 mx-1">
-                  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#heart"></use></svg>
+                <a id="wishlist-btn" class="rounded-circle bg-light p-2 mx-1">
+                  <svg width="24" height="24" viewBox="0 0 24 24">
+                    <use xlink:href="#heart"></use>
+                  </svg>
                 </a>
               </li>
               <div id="wishlist-popup" class="wishlist-popup ">
@@ -221,16 +282,16 @@
                   </div>
                 </div>
               </div>
-              
-              
               <li class="d-lg-none">
-                <a  class="rounded-circle bg-light p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-                  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cart"></use></svg>
+                <a class="rounded-circle bg-light p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
+                  <svg width="24" height="24" viewBox="0 0 24 24">
+                    <use xlink:href="#cart"></use>
+                  </svg>
                 </a>
               </li>
               <li class="d-lg-none">
-                <a  class="rounded-circle bg-light p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSearch" aria-controls="offcanvasSearch">
-                  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#search"></use></svg>
+                <a class="rounded-circle bg-light p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSearch" aria-controls="offcanvasSearch">
+                  ☰
                 </a>
               </li>
             </ul>
@@ -240,79 +301,6 @@
                 <span class="cart-total fs-5 fw-bold">₹1290.00</span>
               </button>
             </div>
-          </div>
-
-        </div>
-      </div>
-      <div class="container-fluid">
-        <div class="row py-3">
-          <div class="d-flex  justify-content-center justify-content-sm-between align-items-center">
-            <nav class="main-menu d-flex navbar navbar-expand-lg">
-
-              <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar"
-                aria-controls="offcanvasNavbar">
-                <span class="navbar-toggler-icon"></span>
-              </button>
-
-              <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
-
-                <div class="offcanvas-header justify-content-Left">
-                  <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                </div>
-
-                <div class="offcanvas-body">
-                  <div class="d-flex align-items-center w-100">
-                    <label for="department-select" class="me-2 fw-bold">Categories:</label>
-                    <div class="dropdown w-100">
-                      <button class="btn dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        🛍️ Shop by Departments
-                      </button>
-                      <ul class="dropdown-menu w-100">
-                        <li class="dropdown-submenu">
-                          <a class="dropdown-item" href="#frozen">❄️ Frozen</a>
-                          <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">🥩 Frozen Meat & Seafood</a></li>
-                            <li><a class="dropdown-item" href="#">🌱 Frozen Vegan & Vegetarian</a></li>
-                            <li><a class="dropdown-item" href="#">🍞 Frozen Breads & Doughs</a></li>
-                            <li><a class="dropdown-item" href="#">🥞 Frozen Breakfast</a></li>
-                          </ul>
-                        </li>
-                        <li class="dropdown-submenu">
-                          <a class="dropdown-item" href="#bakery">🍞 Bakery</a>
-                          <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">🍰 Bakery Desserts</a></li>
-                            <li><a class="dropdown-item" href="#">🥖 Buns & Rolls</a></li>
-                            <li><a class="dropdown-item" href="#">🥐 Breakfast Bakery</a></li>
-                            <li><a class="dropdown-item" href="#">🍞 Bread</a></li>
-                          </ul>
-                        </li>
-                        <li class="dropdown-submenu">
-                          <a class="dropdown-item" href="#dairy-eggs">🥚 Dairy & Eggs</a>
-                          <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">🥛 Milk</a></li>
-                            <li><a class="dropdown-item" href="#">🥚 Eggs</a></li>
-                            <li><a class="dropdown-item" href="#">🧈 Butter</a></li>
-                            <li><a class="dropdown-item" href="#">🍦 Yogurt</a></li>
-                            <li><a class="dropdown-item" href="#">🧀 Cheese</a></li>
-                          </ul>
-                        </li>
-                        <li class="dropdown-submenu">
-                          <a class="dropdown-item" href="#beverages">🥤 Beverages</a>
-                          <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">☕ Coffee</a></li>
-                            <li><a class="dropdown-item" href="#">🍵 Tea</a></li>
-                            <li><a class="dropdown-item" href="#">🥤 Soft Drinks</a></li>
-                            <li><a class="dropdown-item" href="#">🧃 Juice & Nectars</a></li>
-                            <li><a class="dropdown-item" href="#">💧 Water & Sparkling Water</a></li>
-                          </ul>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                
-
-              </div>
           </div>
         </div>
       </div>

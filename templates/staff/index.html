@@ -102,21 +102,13 @@
           </div>
           <div class="col-md-4">
             <input
-              type="text"
-              id="promotion"
-              class="form-control p-3"
-              placeholder="Promotion (Optional)"
-            />
-          </div>
-          <div class="col-md-4">
-            <input
               type="number"
               id="price"
               class="form-control p-3"
               placeholder="Price"
             />
           </div>
-          <div class="col-md-8">
+          <div class="col-md-4">
             <input
               type="file"
               id="product-image"
@@ -125,12 +117,13 @@
               onchange="previewImage(event)"
             />
           </div>
-          <div class="col-md-4 text-center">
+          <div class="col-md-12 text-center">
             <img
               id="image-preview"
               src="#"
               alt="Product Image"
-              class="img-thumbnail d-none preview-img"
+              class="img-thumbnail d-none preview-img mt-2"
+              style="max-height: 150px;"
             />
           </div>
           <div class="col-12 text-center mt-3">
@@ -143,7 +136,7 @@
           </div>
         </div>
       </div>
-
+      
       <!-- Full Width Product Table -->
       <div class="card card-custom p-3">
         <div class="table-responsive">
@@ -154,7 +147,6 @@
                 <th>Name</th>
                 <th>Category</th>
                 <th>Stock</th>
-                <th>Promotion</th>
                 <th>Price</th>
                 <th>Actions</th>
               </tr>
@@ -213,7 +205,6 @@
                   <td>${product.name}</td>
                   <td>${product.category}</td>
                   <td>${product.stock}</td>
-                  <td>${product.promotion ? product.promotion : "-"}</td>
                   <td>₹${product.price ? product.price.toFixed(2) : "0.00"}</td>
                   <td>
                       <button class='btn btn-danger btn-sm' onclick='deleteProduct("${product.product_id}")'>Delete</button>

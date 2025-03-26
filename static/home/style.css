@@ -771,9 +771,8 @@ h6 {
   color: white;
 }
 
-/* Wishlist popup - Full screen overlay */
+ /* Wishlist popup */
 .wishlist-popup {
-  display: none; /* Initially hidden */
   position: fixed;
   top: 0;
   left: 0;
@@ -794,18 +793,19 @@ h6 {
 /* Centered popup content */
 .wishlist-content {
   background: white;
-  left: 35%;
-  top: 20px;
   width: 90%;
   max-width: 600px;
   padding: 20px;
   border-radius: 10px;
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   text-align: center;
+  z-index: 10000;
 }
 
-/* Close button */
 .close-btn {
   position: absolute;
   top: 10px;
@@ -814,7 +814,6 @@ h6 {
   cursor: pointer;
 }
 
-/* Wishlist table styling */
 .wishlist-table {
   width: 100%;
   border-collapse: collapse;
@@ -889,8 +888,8 @@ h6 {
   color: #fff;
 }
 .btn.dropdown-toggle {
+  
   background: #ffff;
-  color: black;
   border: 1px solid black;
   font-weight: bold;
   border-radius: 6px;
