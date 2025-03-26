@@ -21,6 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import razorpay
 import joblib
 from fuzzywuzzy import process
+from datetime import timedelta
 
 
 
@@ -38,6 +39,7 @@ socketio = SocketIO(app)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_COOKIE_NAME"] = "user_session"
+app.permanent_session_lifetime = timedelta(minutes=30) 
 Session(app)
 
 
@@ -85,7 +87,7 @@ else:
 
 
 # ✅ Function to Find Complementary Products
-def find_complementary_products(product_id, top_n=5):
+def find_complementary_products(product_id, top_n=6):
     """Find complementary products based on co-purchase frequency."""
     if order_products_prior.empty:
         return pd.DataFrame()
@@ -348,7 +350,7 @@ def similar_products():
             return jsonify({"success": False, "message": "Customer not logged in"}), 401
 
         # ✅ Fetch Similar Products
-        similar_items = find_similar_products(product_name, top_n=5)
+        similar_items = find_similar_products(product_name, top_n=6)
 
         if similar_items is None or similar_items.empty:
             print("⚠️ No similar products found!")
@@ -1097,8 +1099,15 @@ def delete_product_from_db(product_id, staff_id):
 @app.route('/logout')
 def logout():
     # Clear the session
-    session.clear()
+    session.pop('user_id', None)
+    session.pop('role', None)
+    session.pop('customer_id', None)
+    session.pop('staff_id', None)
+    session.pop('manager_id', None)
+    session.pop('admin_id', None)
+    session.modified = True
     # Redirect to the login page
+    # return redirect(url_for('main'))
     return redirect(url_for('login'))
 
 

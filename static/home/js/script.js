@@ -208,7 +208,7 @@ function displayRecommendedProducts(products) {
           <div class="col">
               <div class="card shadow-sm border-0 h-100 text-center p-2">
                   <img src="${product.image || '/static/default-product.jpg'}" 
-                      class="card-img-top mx-auto" 
+                      <class="card-img-top mx-auto" 
                       alt="${product.product_name}" 
                       style="width: 80px; height: 80px; object-fit: cover;">
 
