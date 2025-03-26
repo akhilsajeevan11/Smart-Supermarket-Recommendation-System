@@ -824,6 +824,7 @@ def staff():
                 SELECT product_id, product_name, category_id, price, stock_quantity, image_url
                 FROM Product
                 WHERE stock_quantity > 0
+                AND category_id != (SELECT category_id FROM Category WHERE category_name = 'General')
             """
             products = db.select(product_query)
 

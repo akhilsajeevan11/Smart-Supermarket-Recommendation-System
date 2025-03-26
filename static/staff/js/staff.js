@@ -117,6 +117,7 @@ function deleteProduct(product_id) {
         if (data.success) {
             removeProductFromUI(product_id);
             socket.emit("product_deleted", { product_id });
+            window.location.reload();
             console.log("Product deleted successfully:", product_id);
         } else {
             console.error("Error deleting product:", data.message);
