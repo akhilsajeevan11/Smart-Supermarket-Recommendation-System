@@ -47,10 +47,16 @@ Session(app)
 # PICKLE_PATH = os.getenv("PICKLE_PATH")
 
 
-# ✅ Define Paths
-MODEL_PATH = "/home/alignminds/Desktop/Akhil/Project/XGB_Model.joblib"
-PRODUCTS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/products.csv"
-ORDERS_PATH = "/home/alignminds/Desktop/Akhil/Project/Data_set/orders.csv"
+
+# ✅ Define Windows-Compatible Paths
+MODEL_PATH = r"C:\Users\Malavika\Desktop\main project\Smart-Supermarket-Recommendation-System\Model\XGB_Model.joblib"
+PRODUCTS_PATH = r"C:\Users\Malavika\Desktop\main project\Smart-Supermarket-Recommendation-System\products.csv"
+ORDERS_PATH = r"C:\Users\Malavika\Desktop\main project\Smart-Supermarket-Recommendation-System\orders.csv"
+
+# ✅ Verify File Paths
+print(f"Model Path Exists: {os.path.exists(MODEL_PATH)}")
+print(f"Products CSV Exists: {os.path.exists(PRODUCTS_PATH)}")
+print(f"Orders CSV Exists: {os.path.exists(ORDERS_PATH)}")
 
 # ✅ Load XGBoost Model (ONLY MODEL)
 try:
@@ -61,21 +67,24 @@ except Exception as e:
     model = None
 
 
-# ✅ Load Products & Orders Data
-try:
-    products = pd.read_csv(PRODUCTS_PATH)
-    order_products_prior = pd.read_csv(ORDERS_PATH)
-    print(f"✅ Products Loaded: {len(products)} rows")
-    print(f"✅ Orders Loaded: {len(order_products_prior)} rows")
-except Exception as e:
-    print(f"❌ Error loading CSV files: {str(e)}")
-    products = pd.DataFrame()
-    order_products_prior = pd.DataFrame()
 
-# ✅ Initialize Vectorizer (TF-IDF) for Similar Products
+# ✅ Load Data with Encoding Fallback for Windows
+try:
+    products = pd.read_csv(PRODUCTS_PATH, encoding="utf-8")
+except UnicodeDecodeError:
+    products = pd.read_csv(PRODUCTS_PATH, encoding="ISO-8859-1")  # Fallback encoding
+
+try:
+    order_products_prior = pd.read_csv(ORDERS_PATH, encoding="utf-8")
+except UnicodeDecodeError:
+    order_products_prior = pd.read_csv(ORDERS_PATH, encoding="ISO-8859-1")
+
+
+
+# ✅ Initialize TF-IDF Vectorizer for Similar Products
 if not products.empty and "product_name" in products.columns:
     vectorizer = TfidfVectorizer()
-    product_tfidf_matrix = vectorizer.fit_transform(products["product_name"])
+    product_tfidf_matrix = vectorizer.fit_transform(products["product_name"].astype(str))
 else:
     vectorizer = None
     product_tfidf_matrix = None
@@ -111,6 +120,7 @@ def find_complementary_products(product_id, top_n=5):
 
 
 
+
 def find_similar_products(product_name, top_n=5):
     """Find similar products based on TF-IDF content similarity with fuzzy matching."""
     if vectorizer is None or product_tfidf_matrix is None:
@@ -120,7 +130,7 @@ def find_similar_products(product_name, top_n=5):
         return pd.DataFrame()
 
     # ✅ Use fuzzy matching to find closest match
-    fuzzy_result = process.extractOne(product_name, products["product_name"])
+    fuzzy_result = process.extractOne(product_name, products["product_name"].str.lower())
 
     # ✅ Ensure valid match was found
     if not fuzzy_result or not isinstance(fuzzy_result, tuple) or len(fuzzy_result) < 2:
@@ -142,8 +152,6 @@ def find_similar_products(product_name, top_n=5):
     similar_products = products.iloc[similar_indices]
 
     return similar_products[["product_id", "product_name"]]
-
-
 
 
 
@@ -334,11 +342,12 @@ def get_sales_data():
  
 
 
-@app.route('/similar_products', methods=['POST'])
+
+@app.route('/similar_products', methods=['POST', 'GET'])
 def similar_products():
     try:
         data = request.get_json()
-        product_name = data.get("product_name")
+        product_name = data.get("product_name").lower()
         customer_id = session.get("customer_id")  # Get customer from session
         print(f"📩 Received request for similar products: {product_name}")
 
@@ -416,7 +425,6 @@ def similar_products():
 
 
 
-
 # ✅ API: Find Complementary Products
 @app.route('/complementary_products', methods=['POST'])
 def complementary_products():
@@ -448,8 +456,6 @@ def find_similar_products_by_id(product_id, top_n=5):
     similar_products = find_similar_products(product_name, top_n)
 
     return similar_products.to_dict(orient="records")
-
-
 
 
 # # ✅ Function to Find Similar Products by ID (Modified)
@@ -510,6 +516,8 @@ def recommend():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"success": False, "message": str(e)}), 500
+
+
 
 
 
