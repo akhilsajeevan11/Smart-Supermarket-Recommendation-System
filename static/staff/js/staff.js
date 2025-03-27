@@ -48,14 +48,16 @@ function updateProductList() {
 }
 
 function addOrUpdateProduct() {
-    console.log("Add Product button clicked");  // ✅ Debugging statement
+    console.log("Add Product button clicked");  // ✅ Debugging
 
-    let name = document.getElementById("product-name").value.trim();
-    let category = document.getElementById("category").value;
-    let stock = parseInt(document.getElementById("stock-amount").value);
-    let promotion = document.getElementById("promotion").value.trim();
-    let price = parseFloat(document.getElementById("price").value);
-    let imageInput = document.getElementById("product-image").files[0];
+    let name = document.getElementById("product-name")?.value.trim();
+    let category = document.getElementById("category")?.value;
+    let stock = parseInt(document.getElementById("stock-amount")?.value);
+    let promotion = document.getElementById("promotion")?.value.trim();
+    let price = parseFloat(document.getElementById("price")?.value);
+    let imageInput = document.getElementById("product-image")?.files[0];
+
+    console.log("Form values:", { name, category, stock, promotion, price, imageInput });  // ✅ Debugging
 
     if (!name || isNaN(stock) || stock <= 0 || isNaN(price) || price <= 0) {
         alert("Please enter valid product details.");
@@ -72,13 +74,15 @@ function addOrUpdateProduct() {
         formData.append("image", imageInput);
     }
 
+    console.log("FormData:", formData);  // ✅ Debugging
+
     fetch("/add_product", {
         method: "POST",
         body: formData,
     })
     .then(response => response.json())
     .then(data => {
-        console.log("Server response:", data);  // ✅ Debugging statement
+        console.log("Server response:", data);  // ✅ Debugging
         if (data.success) {
             alert("Product added successfully!");
             window.location.reload(); 
