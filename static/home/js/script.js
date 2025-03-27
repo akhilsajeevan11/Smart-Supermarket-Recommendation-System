@@ -205,16 +205,11 @@ function displayRecommendedProducts(products) {
 
   products.forEach(product => {
       let productCard = `
-          <div class="col">
-              <div class="card shadow-sm border-0 h-100 text-center p-2">
-                  <img src="${product.image || '/static/default-product.jpg'}" 
-                      <class="card-img-top mx-auto" 
-                      alt="${product.product_name}" 
-                      style="width: 80px; height: 80px; object-fit: cover;">
-
-                  <div class="card-body p-2">
-                      <h6 class="card-title text-truncate" style="max-width: 100px;">${product.product_name}</h6>
-                      <button class="btn btn-sm btn-primary w-100 mt-2" 
+          <div class="col-md-4"> <!-- Increased width -->
+              <div class="card shadow-sm border-0 h-100 text-center p-3"> <!-- Increased padding -->
+                  <div class="card-body p-3">
+                      <h5 class="card-title text-truncate" style="max-width: 150px;">${product.product_name}</h5> <!-- Increased max-width -->
+                      <button class="btn btn-lg btn-primary w-100 mt-3" 
                           onclick="addToCart(event, this)">
                           🛒 Add to Cart
                       </button>

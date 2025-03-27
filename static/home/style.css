@@ -962,3 +962,6 @@ section {
 }
 
 
+#recommended-products .card {
+  min-height: 200px; /* Increase card height */
+}
