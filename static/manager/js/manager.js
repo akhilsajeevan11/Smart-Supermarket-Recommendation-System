@@ -92,9 +92,13 @@ function fetchSalesAnalytics() {
     fetch('/customer_preferences')
         .then(response => response.json())
         .then(data => {
+            console.log("Customer Preferences Data:", data);  // ✅ Debugging
             if (data.success) {
                 const preferenceLabels = data.customer_preferences.map(item => item.product_name);
                 const preferenceValues = data.customer_preferences.map(item => item.total_quantity);
+
+                console.log("Preference Labels:", preferenceLabels);  // ✅ Debugging
+                console.log("Preference Values:", preferenceValues);  // ✅ Debugging
 
                 renderChart('customerChart', 'doughnut', preferenceLabels, preferenceValues, 'Customer Preferences', ['#FFD433', '#FF5733', '#33FF57']);
             } else {
