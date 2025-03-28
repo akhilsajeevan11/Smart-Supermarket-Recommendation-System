@@ -963,11 +963,19 @@ section {
 
 <<<<<<< Updated upstream
 /* Container for recommended items */
-/* Container for recommended items */
+.recommended-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 100%;
+}
+
+/* Each recommended item */
 .recommended-item {
-  width: 100%;
-  max-width: 460px; /* Fits within 500px sidebar while looking neat */
-  margin: 12px auto;
+  width: calc(33.33% - 12px); /* Three items per row with spacing */
+  max-width: 200px;
+  margin: 12px 0;
   display: flex;
   justify-content: center;
   transition: transform 0.2s ease-in-out;
@@ -981,7 +989,6 @@ section {
 /* Card styling */
 .Rcard {
   width: 100%;
-  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -992,6 +999,7 @@ section {
   background: white;
   text-align: center;
   transition: box-shadow 0.3s ease-in-out;
+  height: 100%; /* Ensure all cards have the same height */
 }
 
 /* Card hover effect */
@@ -1000,22 +1008,26 @@ section {
   border-color: #ffc43f;
 }
 
-/* Product title styling */
+/* Product title styling - Fixed height for uniformity */
 .Rcard-title {
   font-size: 1.1rem;
   font-weight: bold;
   max-width: 90%;
-  white-space: nowrap;
+  height: 48px; /* Ensures all titles take the same space */
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limits title to 2 lines */
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
   color: #333;
 }
+
 
 /* Full-width, beautiful button */
 .btn-add-to-cart {
   width: 100%;
   padding: 8px;
-  font-size: 1rem;
+  font-size: 0.75rem;
   font-weight: bold;
   background: linear-gradient(135deg, #ffc43f, #ff9800);
   color: white;
@@ -1023,7 +1035,7 @@ section {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.3s ease-in-out, transform 0.2s;
-  margin-top: auto;
+  margin-top: auto; /* Ensures buttons align at the bottom */
   box-shadow: 0px 4px 6px rgba(255, 160, 0, 0.3);
 }
 
@@ -1035,12 +1047,17 @@ section {
 }
 
 /* Responsive adjustments */
-@media (max-width: 500px) {
+@media (max-width: 768px) {
   .recommended-item {
-    max-width: 100%;
+    width: calc(50% - 12px); /* Two items per row on medium screens */
   }
 }
 
+@media (max-width: 500px) {
+  .recommended-item {
+    width: 100%; /* Single item per row on smaller screens */
+  }
+}
 
 
 
