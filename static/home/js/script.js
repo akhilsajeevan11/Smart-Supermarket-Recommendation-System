@@ -132,40 +132,37 @@ function closeWishlistPopup() {
   document.getElementById("wishlist-popup").style.display = "none";
   document.getElementById("wishlist-popup").classList.remove("show");
 }
-
-// ✅ Cart Management
+// ✅ Initialize Cart
 function initCart() {
   document.querySelectorAll(".add-to-cart").forEach((button) => {
     button.addEventListener("click", addToCart);
   });
 
+  document.querySelectorAll(".btn-add-to-cart").forEach((button) => {
+    button.addEventListener("click", addRecommendedToCart);
+  });
+
   updateCartUI();
 }
 
+// ✅ Add to Cart for Regular Products
 async function addToCart(event, btn) {
-  event.preventDefault(); // ✅ Prevent page reload
+  event.preventDefault();
 
-  let product = btn.closest(".product-item"); // ✅ Find the product container
+  let product = btn.closest(".product-item");
   if (!product) {
     console.error("❌ Could not find product element!");
     return;
   }
 
   let productId = product.getAttribute("data-product-id");
-  let name = product.querySelector("h3")?.innerText.trim(); // ✅ Select product name correctly
-  let price =
-    parseFloat(product.querySelector(".price")?.innerText.replace("₹", "")) ||
-    0;
-  let image = product.querySelector("img")?.getAttribute("src"); // ✅ Use getAttribute("src")
-  let quantity = parseInt(product.querySelector(".input-number")?.value) || 1; // ✅ Extract quantity
+  let name = product.querySelector("h3")?.innerText.trim();
+  let price = parseFloat(product.querySelector(".price")?.innerText.replace("₹", "")) || 0;
+  let image = product.querySelector("img")?.getAttribute("src");
+  let quantity = parseInt(product.querySelector(".input-number")?.value) || 1;
 
   if (!productId || !name || isNaN(price) || !image) {
-    console.error("❌ Missing product details!", {
-      productId,
-      name,
-      price,
-      image,
-    });
+    console.error("❌ Missing product details!", { productId, name, price, image });
     return;
   }
 
@@ -182,23 +179,25 @@ async function addToCart(event, btn) {
   alert("✅ Product Added to Cart");
   updateCartUI();
 
-  // ✅ Show loading animation while fetching recommended products
-  let recommendationsContainer = document.querySelector(
-    "#recommended-products .row"
-  );
+  // ✅ Fetch and Display Recommended Products
+  fetchRecommendedProducts(name);
+}
+
+// ✅ Fetch Recommended Products
+async function fetchRecommendedProducts(productName) {
+  let recommendationsContainer = document.querySelector("#recommended-products .row");
   recommendationsContainer.innerHTML = `
     <div class="spinner-container">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="loading-text">Loading recommendations.....</p>
-  </div>
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="loading-text">Loading recommendations...</p>
+    </div>
   `;
 
-  // ✅ Fetch recommended products from the backend
   try {
     let response = await fetch("/similar_products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_name: name }), // Send product name
+      body: JSON.stringify({ product_name: productName }),
     });
 
     let data = await response.json();
@@ -210,37 +209,75 @@ async function addToCart(event, btn) {
     }
   } catch (error) {
     console.error("❌ Error fetching recommended products:", error);
-    displayRecommendedProducts([]); // Clear loading in case of error
+    displayRecommendedProducts([]);
   }
 }
 
+// ✅ Display Recommended Products
 function displayRecommendedProducts(products) {
-  let recommendationsContainer = document.querySelector(
-    "#recommended-products .row"
-  );
-  recommendationsContainer.innerHTML = ""; // Clear previous content
+  let recommendationsContainer = document.querySelector("#recommended-products .row");
+  recommendationsContainer.innerHTML = "";
 
   if (products.length === 0) {
-    recommendationsContainer.innerHTML =
-      "<p class='text-muted text-center'>No recommendations available.</p>";
+    recommendationsContainer.innerHTML = "<p class='text-muted text-center'>No recommendations available.</p>";
     return;
   }
 
   products.forEach((product) => {
     let productCard = `
-      <div class="recommended-item">
+      <div class="recommended-item" data-product-id="${product.product_id}" data-name="${product.product_name}" data-price="${product.price}" data-image="${product.image}">
         <div class="Rcard">
-            <div class="Rcard-body">
-                <h5 class="Rcard-title">${product.product_name}</h5>
-                <button class="btn-add-to-cart" onclick="addToCart(event, this)">
-                    🛒 Add to Cart
-                </button>
-            </div>
+          <div class="Rcard-body">
+            <h5 class="Rcard-title">${product.product_name}</h5>
+            <button class="btn-add-to-cart">Add to Cart</button>
+          </div>
         </div>
       </div>
     `;
     recommendationsContainer.innerHTML += productCard;
   });
+
+  // ✅ Attach event listeners for recommended products
+  document.querySelectorAll(".btn-add-to-cart").forEach((button) => {
+    button.addEventListener("click", addRecommendedToCart);
+  });
+}
+
+// ✅ Add to Cart for Recommended Products
+async function addRecommendedToCart(event) {
+  event.preventDefault();
+
+  let btn = event.target;
+  let product = btn.closest(".recommended-item");
+
+  if (!product) {
+    console.error("❌ Could not find recommended product element!");
+    return;
+  }
+
+  let productId = product.getAttribute("data-product-id");
+  let name = product.getAttribute("data-name");
+  let price = parseFloat(product.getAttribute("data-price")) || 50;
+  let image = product.getAttribute("data-image") || "default.jpg";
+  let quantity = 1;
+
+  if (!productId || !name || isNaN(price)) {
+    console.error("❌ Missing product details!", { productId, name, price, image });
+    return;
+  }
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  let existingItem = cart.find((item) => item.product_id === productId);
+
+  if (existingItem) {
+    existingItem.quantity += quantity;
+  } else {
+    cart.push({ product_id: productId, name, price, quantity, image });
+  }
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  alert("✅ Recommended Product Added to Cart");
+  updateCartUI();
 }
 
 
