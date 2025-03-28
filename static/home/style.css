@@ -961,6 +961,7 @@ section {
   }
 }
 
+<<<<<<< Updated upstream
 /* Container for recommended items */
 /* Container for recommended items */
 .recommended-item {
@@ -1065,3 +1066,16 @@ section {
 }
 
 
+=======
+
+#recommended-products .card {
+  min-height: 200px; /* Increase card height */
+  min-width: 200px;
+  margin-left: 20px;
+}
+
+.offcanvas.offcanvas-end{
+  width: 500px !important;  /* Set your desired width */
+  
+}
+>>>>>>> Stashed changes
