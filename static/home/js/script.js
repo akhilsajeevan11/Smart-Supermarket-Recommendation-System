@@ -272,7 +272,7 @@ async function addRecommendedToCart(event) {
   if (existingItem) {
     existingItem.quantity += quantity;
   } else {
-    cart.push({ product_id: productId, name, price, quantity, image });
+    cart.push({ product_id: productId, name, price, quantity, image, is_recommended: true });
   }
 
   localStorage.setItem("cart", JSON.stringify(cart));
