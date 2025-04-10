@@ -121,12 +121,62 @@
                   ✅ Proceed to Checkout
               </button>
   
+
               <!-- ✅ Recommended Products Section -->
               <div id="recommended-products" class="mt-4">
-                  <!-- <h5 class="text-secondary">✨ Recommended for You</h5> -->
                   <h5 class="text-secondary fw-bold mb-3">✨ Recommended for You</h5>
-                  <div class="row row-cols-2 row-cols-md-3 g-3"></div>
-                  <!-- <div class="row"></div> -->
+                  <div class="row row-cols-2 row-cols-md-3 g-3">
+                    {% for product in recommendations %}
+                    <div class="col">
+                      <div class="card mb-4">
+                        <img src="{{ product.image_url }}" 
+                             class="card-img-top"
+                             alt="{{ product.product_name }}"
+                             style="height: 180px; object-fit: contain">
+                        <div class="card-body">
+                          <h5 class="card-title">{{ product.product_name }}</h5>
+                          <p class="card-text">Price: ₹{{ product.price }}</p>
+                          <button class="btn btn-sm btn-primary add-to-cart"
+                                  data-product-id="{{ product.product_id }}"
+                                  data-name="{{ product.product_name }}"
+                                  data-price="{{ product.price }}"
+                                  data-image="{{ product.image_url }}">
+                            Add to Cart
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+              </div>
+
+              <!-- ✅ Purchased Products Section -->
+              <div class="mt-4 purchased-products">
+                  <!-- <h2 class="text-secondary fw-bold mb-3">Your Recently Purchased Products</h2> -->
+                  <h2 class="fw-bold mb-3" style="color: #888888;">Your Recently Purchased Products</h2>
+                  <div class="row row-cols-2 row-cols-md-3 g-3">
+                    {% for product in purchased_products %}
+                    <div class="col">
+                        <div class="card mb-4">
+                            <img src="{{ product.image_url }}"
+                                 class="card-img-top"
+                                 alt="{{ product.product_name }}"
+                                 style="height: 180px; object-fit: contain">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ product.product_name }}</h5>
+                                <p class="card-text">Price: ₹{{ product.price }}</p>
+                                <button class="btn btn-sm btn-primary add-to-cart"
+                                        data-product-id="{{ product.product_id }}"
+                                        data-name="{{ product.product_name }}"
+                                        data-price="{{ product.price }}"
+                                        data-image="{{ product.image_url }}">
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                  </div>
               </div>
           </div>
       </div>

@@ -18,7 +18,7 @@ function initPreloader() {
   });
 }
 
-// ✅ Initialize Swiper Sliders Efficiently
+// ✅ Initialize Swiper Sliders Efficientl
 function initSwipers() {
   const categories = [
     { id: "frozen", carouselClass: "products-carousel" },
@@ -132,12 +132,19 @@ function closeWishlistPopup() {
   document.getElementById("wishlist-popup").style.display = "none";
   document.getElementById("wishlist-popup").classList.remove("show");
 }
-// ✅ Initialize Cart
+
+// ✅ Modified Cart Initialization
 function initCart() {
-  document.querySelectorAll(".add-to-cart").forEach((button) => {
-    button.addEventListener("click", addToCart);
+  // Add event delegation for all add-to-cart buttons
+  document.body.addEventListener('click', function(event) {
+    const addToCartBtn = event.target.closest('.add-to-cart');
+    if (addToCartBtn) {
+      event.preventDefault();
+      handleUniversalAddToCart(addToCartBtn);
+    }
   });
 
+  // Keep existing code for recommended products
   document.querySelectorAll(".btn-add-to-cart").forEach((button) => {
     button.addEventListener("click", addRecommendedToCart);
   });
@@ -145,7 +152,42 @@ function initCart() {
   updateCartUI();
 }
 
-// ✅ Add to Cart for Regular Products
+// ✅ New Universal Add to Cart Handler
+function handleUniversalAddToCart(button) {
+  const productData = {
+    productId: button.dataset.productId,
+    name: button.dataset.name,
+    price: parseFloat(button.dataset.price),
+    image: button.dataset.image,
+    quantity: 1
+  };
+
+  if (!productData.productId || !productData.name || isNaN(productData.price)) {
+    console.error("❌ Invalid product data:", productData);
+    return;
+  }
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  const existingItem = cart.find(item => item.product_id === productData.productId);
+
+  if (existingItem) {
+    existingItem.quantity += productData.quantity;
+  } else {
+    cart.push({
+      product_id: productData.productId,
+      name: productData.name,
+      price: productData.price,
+      quantity: productData.quantity,
+      image: productData.image
+    });
+  }
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  alert("✅ Product Added to Cart");
+  updateCartUI();
+}
+
+// ✅ Keep existing addToCart function unchanged
 async function addToCart(event, btn) {
   event.preventDefault();
 
@@ -279,7 +321,6 @@ async function addRecommendedToCart(event) {
   alert("✅ Recommended Product Added to Cart");
   updateCartUI();
 }
-
 
 function updateCartUI() {
   const cart = JSON.parse(localStorage.getItem("cart")) || [];

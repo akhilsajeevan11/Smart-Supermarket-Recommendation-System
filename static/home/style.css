@@ -961,7 +961,7 @@ section {
   }
 }
 
-<<<<<<< Updated upstream
+
 /* Container for recommended items */
 .recommended-container {
   display: flex;
@@ -1083,7 +1083,7 @@ section {
 }
 
 
-=======
+
 
 #recommended-products .card {
   min-height: 200px; /* Increase card height */
@@ -1095,4 +1095,4 @@ section {
   width: 500px !important;  /* Set your desired width */
   
 }
->>>>>>> Stashed changes
+

@@ -18,7 +18,8 @@ function fetchProducts() {
         .then(data => {
             window.products = data; // Store products globally
             updateProductList();  // Display products in UI
-            checkLowStock();  // Check stock levels
+            // checkLowStock();
+            // sendNotification();
         })
         .catch(error => console.error("Error fetching products:", error));
 }

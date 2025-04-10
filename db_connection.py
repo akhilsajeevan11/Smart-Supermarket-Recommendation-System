@@ -25,7 +25,7 @@ class Db:
                 port=int(os.getenv('DB_PORT', 3306)),
                 auth_plugin=os.getenv('DB_AUTH_PLUGIN', 'mysql_native_password')
             )
-            self.cursor = self.connection.cursor(dictionary=True)
+            self.cursor = self.connection.cursor(dictionary=True, buffered=True)
             self.connection.autocommit = False  # Disable auto-commit
         except Error as err:
             logging.error(f"Database connection failed: {err}")
