@@ -65,8 +65,8 @@ function fetchSalesAnalytics() {
                 const salesValues = data.sales_data.map(item => item.total_sales);
                 const revenueValues = data.sales_data.map(item => item.revenue);
 
-                renderChart('salesChart', 'bar', salesLabels, salesValues, 'Total Sales', '#4f46e5');
-                renderChart('topProductsChart', 'pie', salesLabels, revenueValues, 'Revenue Distribution', ['#33FF57', '#3357FF', '#FF33A1']);
+                renderChart('salesChart', 'bar', salesLabels, salesValues, 'Total Sales');
+                renderChart('topProductsChart', 'pie', salesLabels, revenueValues, 'Revenue Distribution');
             } else {
                 console.error("Error fetching sales data:", data.error);
             }
@@ -78,10 +78,16 @@ function fetchSalesAnalytics() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const demandLabels = data.future_demand.map(item => item.product_name);
-                const demandValues = new Array(demandLabels.length).fill(1); // Equal values for visual representation
+                if (data.future_demand.length === 0) {
+                    console.warn("No future demand data available.");
+                    // Display a message or fallback chart
+                    renderChart('demandChart', 'bar', ['No Data'], [1], 'Future Demand');
+                } else {
+                    const demandLabels = data.future_demand.map(item => item.product_name);
+                    const demandValues = data.future_demand.map(item => item.demand_score);
 
-                renderChart('demandChart', 'bar', demandLabels, demandValues, 'Future Demand', '#FF5733');
+                    renderChart('demandChart', 'bar', demandLabels, demandValues, 'Future Demand');
+                }
             } else {
                 console.error("Error fetching future demand:", data.error);
             }
@@ -100,7 +106,7 @@ function fetchSalesAnalytics() {
                 console.log("Preference Labels:", preferenceLabels);  // ✅ Debugging
                 console.log("Preference Values:", preferenceValues);  // ✅ Debugging
 
-                renderChart('customerChart', 'doughnut', preferenceLabels, preferenceValues, 'Customer Preferences', ['#FFD433', '#FF5733', '#33FF57']);
+                renderChart('customerChart', 'doughnut', preferenceLabels, preferenceValues, 'Customer Preferences');
             } else {
                 console.error("Error fetching customer preferences:", data.error);
             }
@@ -114,13 +120,17 @@ document.addEventListener('DOMContentLoaded', function() {
     fetchSalesAnalytics(); // Load live sales data
     setupSocketListeners(); // Enable WebSocket updates
 
-    renderChart('demandChart', 'bar', ['Product A', 'Product B', 'Product C'], [300, 450, 500], 'Future Demand', '#FF5733');
-    renderChart('customerChart', 'doughnut', ['Preference A', 'Preference B', 'Preference C'], [40, 35, 25], 'Customer Preferences', ['#FFD433', '#FF5733', '#33FF57']);
+    renderChart('demandChart', 'bar', ['Product A', 'Product B', 'Product C'], [300, 450, 500], 'Future Demand');
+    renderChart('customerChart', 'doughnut', ['Preference A', 'Preference B', 'Preference C'], [40, 35, 25], 'Customer Preferences');
 });
 
 // Chart.js Function
-function renderChart(canvasId, type, labels, data, label, colors) {
+function renderChart(canvasId, type, labels, data, label) {
     let ctx = document.getElementById(canvasId).getContext('2d');
+    
+    // Generate dynamic colors for each product
+    const colors = generateColors(labels.length);
+
     new Chart(ctx, {
         type: type,
         data: {
@@ -128,11 +138,21 @@ function renderChart(canvasId, type, labels, data, label, colors) {
             datasets: [{
                 label: label,
                 data: data,
-                backgroundColor: Array.isArray(colors) ? colors : colors,
+                backgroundColor: colors, // Use dynamic colors
                 borderWidth: 1,
             }]
         }
     });
+}
+
+// Function to generate an array of random colors
+function generateColors(count) {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+        const color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 0.6)`;
+        colors.push(color);
+    }
+    return colors;
 }
 
 // WebSocket (Socket.IO) Connection
