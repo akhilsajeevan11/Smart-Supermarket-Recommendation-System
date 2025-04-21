@@ -158,22 +158,6 @@ function previewImage(event) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-    fetchProducts();
-    
-    socket.on("new_notification", (data) => {
-        handleNewNotification(data);
-    });
-});
-
-// Toggle Notifications List
-function toggleNotifications() {
-    const dialog = document.getElementById("notification-dialog");
-    dialog.style.display = dialog.style.display === "none" || dialog.style.display === "" ? "block" : "none";
-
-    updateNotificationUI(); // Refresh notification UI when opened
-}
-
 // Handle New Notifications
 function handleNewNotification(data) {
     const notificationBadge = document.getElementById("notification-badge");
@@ -199,65 +183,22 @@ function updateNotificationUI() {
     notifications.forEach(notification => {
         const notificationItem = document.createElement("li");
         notificationItem.className = "list-group-item";
-        notificationItem.textContent = notification.message;
+        notificationItem.textContent = notification.message;  // ✅ Access the 'message' property
         notificationList.appendChild(notificationItem);
     });
 }
 
-// Simulate a test notification when button is clicked (For debugging)
-function testNotification() {
-    handleNewNotification({ message: "🔔 Test Notification at " + new Date().toLocaleTimeString() });
-}
-
-
-function sendNotification(productName, stock) {
-    // Check if the same notification already exists
-    const existingNotification = notifications.find(n => n.message.includes(productName));
-    if (existingNotification) return; // Avoid duplicates
-
-    console.log(`🔔 Low stock alert: ${productName} has only ${stock} left.`);
-
-    handleNewNotification({
-        message: `⚠️ Low stock: ${productName} (Only ${stock} left)`,
-    });
-}
-
-
-
-// Check for low-stock products and send notifications
-function checkLowStock() {
-    if (!window.products || window.products.length === 0) return;
-
-    const lowStockProducts = window.products.filter(product => product.stock > 0 && product.stock < 10);
-    const staffId = getStaffId();
-
-    if (!staffId) {
-        console.error("Staff ID not found. Cannot send notifications.");
-        return;
-    }
-
-    lowStockProducts.forEach(product => {
-        sendNotification(product.name, product.stock);
-    });
-}
-
-
+// Toggle Notifications List
 function toggleNotifications() {
     const dialog = document.getElementById("notification-dialog");
-
-    if (!dialog) {
-        console.error("Notification dialog not found!");
-        return;
-    }
-
     dialog.style.display = dialog.style.display === "none" || dialog.style.display === "" ? "block" : "none";
 
     updateNotificationUI(); // Refresh notification UI when opened
 }
 
-// Ensure script runs after DOM is ready
+// Initialize the page
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("JavaScript Loaded! ✅");
+    socket.on("new_notification", (data) => handleNewNotification(data)); // Listen for notifications
 });
 
 window.history.pushState(null, "", window.location.href);

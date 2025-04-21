@@ -38,7 +38,8 @@ function notifyStaff() {
 
 // Display success/failure messages for notifications
 function updateNotificationResponse(messages) {
-    document.getElementById('notification-response').innerHTML = messages.map(msg => `<div>${msg}</div>`).join('');
+    const responseDiv = document.getElementById('notification-response');
+    responseDiv.innerHTML = messages.join('<br>');
 }
 
 // Load Sections
