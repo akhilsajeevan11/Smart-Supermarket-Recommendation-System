@@ -95,6 +95,12 @@ function displayWishlist(triggeredByUser = false) {
 }
 
 function addToWishlist(event) {
+  const notyf = new Notyf({
+    position: {
+      x: 'center',  // 👈 center horizontally
+      y: 'top',     // 👈 top vertically
+    }
+  });
   event.preventDefault();
   let product = event.target.closest(".product-item");
   if (!product) return;
@@ -109,17 +115,24 @@ function addToWishlist(event) {
   if (!wishlist.some((item) => item.title === title)) {
     wishlist.push({ title, price, image, qty: 1 });
     localStorage.setItem("wishlist", JSON.stringify(wishlist));
-    alert("✅ Item added to wishlist!");
+    notyf.success("Item added to wishlist!");
   } else {
-    alert("⚠️ Item already in wishlist!");
+    notyf.success("Item already in wishlist!");
   }
   displayWishlist(false);
 }
 
 function removeFromWishlist(title) {
+  const notyf = new Notyf({
+    position: {
+      x: 'center',  // 👈 center horizontally
+      y: 'top',     // 👈 top vertically
+    }
+  });
   let wishlist = getWishlist();
   wishlist = wishlist.filter((item) => item.title !== title);
   localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  notyf.error("Item removed from wishlist!");
   displayWishlist(true);
 }
 
@@ -154,6 +167,12 @@ function initCart() {
 
 // ✅ New Universal Add to Cart Handler
 function handleUniversalAddToCart(button) {
+  const notyf = new Notyf({
+    position: {
+      x: 'center',  // 👈 center horizontally
+      y: 'top',     // 👈 top vertically
+    }
+  });
   const productData = {
     productId: button.dataset.productId,
     name: button.dataset.name,
@@ -183,14 +202,19 @@ function handleUniversalAddToCart(button) {
   }
 
   localStorage.setItem("cart", JSON.stringify(cart));
-  alert("✅ Product Added to Cart");
+  notyf.success("Product added to cart");
   updateCartUI();
 }
 
 // ✅ Keep existing addToCart function unchanged
 async function addToCart(event, btn) {
   event.preventDefault();
-
+  const notyf = new Notyf({
+    position: {
+      x: 'center',  // 👈 center horizontally
+      y: 'top',     // 👈 top vertically
+    }
+  });
   let product = btn.closest(".product-item");
   if (!product) {
     console.error("❌ Could not find product element!");
@@ -218,7 +242,8 @@ async function addToCart(event, btn) {
   }
 
   localStorage.setItem("cart", JSON.stringify(cart));
-  alert("✅ Product Added to Cart");
+  // alert("✅ Product Added to Cart");
+  notyf.success("Product added to cart");
   updateCartUI();
 
   // ✅ Fetch and Display Recommended Products
@@ -318,7 +343,7 @@ async function addRecommendedToCart(event) {
   }
 
   localStorage.setItem("cart", JSON.stringify(cart));
-  alert("✅ Recommended Product Added to Cart");
+  notyf.success("Recommended Product Added to Cart");
   updateCartUI();
 }
 

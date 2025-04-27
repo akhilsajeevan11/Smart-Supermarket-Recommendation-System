@@ -49,6 +49,13 @@ function updateProductList() {
 }
 
 function addOrUpdateProduct() {
+    const notyf = new Notyf({
+        position: {
+          x: 'center',  // 👈 center horizontally
+          y: 'top',     // 👈 top vertically
+        }
+      });
+      
     console.log("Add Product button clicked");  // ✅ Debugging
 
     let name = document.getElementById("product-name")?.value.trim();
@@ -84,13 +91,13 @@ function addOrUpdateProduct() {
     .then(response => response.json())
     .then(data => {
         console.log("Server response:", data);  // ✅ Debugging
-        if (data.success) {
-            alert("Product added successfully!");
-            window.location.reload(); 
+        if (data.success) { 
+            notyf.success(data.message);
+            reloadPage()
             socket.emit("new_product", data.product);  // Emit update to other users
             addProductToUI(data.product); // Update UI dynamically
         } else {
-            alert("Failed to add product: " + data.message);
+            notyf.error(data.message);
         }
     })
     .catch(error => console.error("Error:", error));
@@ -205,3 +212,14 @@ window.history.pushState(null, "", window.location.href);
 window.onpopstate = function () {
   window.history.pushState(null, "", window.location.href);
 };
+
+function handleHeloo(){
+    const notyf = new Notyf();
+    notyf.success('Product added successfully!');
+}
+
+function reloadPage(){
+    setTimeout(()=>{
+        window.location.reload(); 
+    },3000)
+}

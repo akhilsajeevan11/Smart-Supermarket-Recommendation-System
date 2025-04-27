@@ -27,6 +27,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='/home/style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css"
+    />
   </head>
   <body
     style="
@@ -97,6 +101,12 @@
         .getElementById("loginForm")
         .addEventListener("submit", async function (event) {
           event.preventDefault();
+          const notyf = new Notyf({
+            position: {
+              x: "right", // 👈 center horizontally
+              y: "top", // 👈 top vertically
+            },
+          });
 
           const email = document.getElementById("email").value;
           const password = document.getElementById("password").value;
@@ -118,8 +128,10 @@
             const result = await response.json();
 
             if (result.success) {
-              // Use the redirect URL from the backend response
-              window.location.href = result.redirect;
+              notyf.success("Login Successfull");
+              setTimeout(() => {
+                window.location.href = result.redirect
+              }, 1500); // wait 1.5 seconds before redirecting
             } else {
               alert(result.error || "Login failed");
             }
@@ -133,5 +145,6 @@
         window.history.pushState(null, "", window.location.href);
       };
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
   </body>
 </html>

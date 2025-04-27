@@ -93,7 +93,13 @@ function toggleSidebar() {
 // ✅ User Management - Create User Function
 async function createUser() {
     console.log("createUser function called");  // Debugging
-    
+    const notyf = new Notyf({
+        position: {
+          x: 'center',  // 👈 center horizontally
+          y: 'top',     // 👈 top vertically
+        }
+      });
+      
     const userData = {
         username: document.getElementById("username").value,
         email: document.getElementById("email").value,

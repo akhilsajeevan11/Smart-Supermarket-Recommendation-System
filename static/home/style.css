@@ -1096,3 +1096,17 @@ section {
   
 }
 
+.notyf__toast--success::before {
+  background: rgba(61, 199, 99, 0.7); /* green for success */
+}
+
+.notyf__toast--error::before {
+  background: rgba(255, 99, 71, 0.7); /* red for error */
+
+}
+.notyf__toast {
+  min-width: 400px; /* 🔥 Adjust width as needed */
+  max-width: 500px; /* 🔥 Set a max width if you want */
+  width: auto;
+  text-align: center; /* optional: center the text */
+}

@@ -89,3 +89,21 @@ body {
     }
   }
   
+  @keyframes toast {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+  .notyf__toast {
+    min-width: 400px; /* 🔥 Adjust width as needed */
+    max-width: 500px; /* 🔥 Set a max width if you want */
+    width: auto;
+    text-align: center; /* optional: center the text */
+  }
+
