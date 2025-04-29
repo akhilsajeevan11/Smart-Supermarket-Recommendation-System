@@ -181,6 +181,8 @@ function handleUniversalAddToCart(button) {
     quantity: 1
   };
 
+  console.log("Product Data:", productData); // Debugging
+
   if (!productData.productId || !productData.name || isNaN(productData.price)) {
     console.error("❌ Invalid product data:", productData);
     return;
@@ -280,7 +282,6 @@ async function fetchRecommendedProducts(productName) {
   }
 }
 
-// ✅ Display Recommended Products
 function displayRecommendedProducts(products) {
   let recommendationsContainer = document.querySelector("#recommended-products .row");
   recommendationsContainer.innerHTML = "";
@@ -292,11 +293,17 @@ function displayRecommendedProducts(products) {
 
   products.forEach((product) => {
     let productCard = `
-      <div class="recommended-item" data-product-id="${product.product_id}" data-name="${product.product_name}" data-price="${product.price}" data-image="${product.image}">
+      <div class="recommended-item">
         <div class="Rcard">
           <div class="Rcard-body">
             <h5 class="Rcard-title">${product.product_name}</h5>
-            <button class="btn-add-to-cart">Add to Cart</button>
+            <button class="btn-add-to-cart"
+                    data-product-id="${product.product_id}"
+                    data-name="${product.product_name}"
+                    data-price="${product.price}"
+                    data-image="${product.image}">
+              Add to Cart
+            </button>
           </div>
         </div>
       </div>
@@ -304,11 +311,15 @@ function displayRecommendedProducts(products) {
     recommendationsContainer.innerHTML += productCard;
   });
 
-  // ✅ Attach event listeners for recommended products
-  document.querySelectorAll(".btn-add-to-cart").forEach((button) => {
-    button.addEventListener("click", addRecommendedToCart);
+  // ✅ Attach event listeners using existing handler
+  document.querySelectorAll("#recommended-products .btn-add-to-cart").forEach((button) => {
+    button.addEventListener("click", function(event) {
+      event.preventDefault();
+      handleUniversalAddToCart(button);
+    });
   });
 }
+
 
 // ✅ Add to Cart for Recommended Products
 async function addRecommendedToCart(event) {

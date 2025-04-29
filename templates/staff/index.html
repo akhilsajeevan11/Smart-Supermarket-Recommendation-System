@@ -44,7 +44,7 @@
       <div class="ms-auto position-relative">
         <button class="btn btn-warning" onclick="toggleNotifications()">
           Notifications
-          <span id="notification-badge" class="badge bg-danger d-none">{{ notifications|length }}</span>
+          <span id="notification-badge" class="badge bg-danger">{{ notifications|length }}</span>
         </button>
         <!-- Notification Dialog -->
         <div id="notification-dialog" class="notification-dialog p-3">
@@ -60,7 +60,7 @@
               <li class="list-group-item text-muted">No notifications</li>
             {% endif %}
           </ul>
-        </div>
+        </div>        
       </div>
     </nav>
     
@@ -215,5 +215,10 @@
       }
     </script>
      <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+
+    <!-- Debug Block -->
+    <div style="display: none;">
+      <p>Notifications: {{ notifications }}</p>
+    </div>
   </body>
 </html>

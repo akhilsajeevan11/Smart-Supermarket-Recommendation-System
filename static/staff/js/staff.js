@@ -183,7 +183,7 @@ function updateNotificationUI() {
     notificationList.innerHTML = "";
 
     if (notifications.length === 0) {
-        notificationList.innerHTML = `<li class="list-group-item text-muted">No notifications</li>`;
+        notificationList.innerHTML = "<li class='list-group-item text-muted'>No notifications</li>";
         return;
     }
 
@@ -198,9 +198,11 @@ function updateNotificationUI() {
 // Toggle Notifications List
 function toggleNotifications() {
     const dialog = document.getElementById("notification-dialog");
-    dialog.style.display = dialog.style.display === "none" || dialog.style.display === "" ? "block" : "none";
-
-    updateNotificationUI(); // Refresh notification UI when opened
+    if (dialog.style.display === "none" || dialog.style.display === "") {
+        dialog.style.display = "block";
+    } else {
+        dialog.style.display = "none";
+    }
 }
 
 // Initialize the page
