@@ -1,16 +1,37 @@
+/* body{
+    background-color: #fffff0;
+    
+} */
 
-body{
+/* Ensure page uses full height and resets margin */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
     background-color: #fffff0;
 }
+
+/* Sidebar styling */
 .sidebar {
     width: 250px;
-    max-height: 100vh;
-    height: 100vh; 
-    background-color: #343a40;
+    background-color: #343a40; /* blackish */
     color: #fff;
-    padding: 1rem;
-    position: relative;
+    padding: 2rem;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    overflow-y: auto;
+    z-index: 1000;
 }
+
+/* Adjust content so it's not hidden behind fixed sidebar */
+.content {
+    margin-left: 250px;
+    padding: 1.5rem;
+}
+
+/* Sidebar links */
 .sidebar a {
     display: block;
     padding: 0.5rem 0;
@@ -21,6 +42,14 @@ body{
     background-color: #495057;
     border-radius: 4px;
 }
+
+/* Optional utility */
+.bg-gray-100 {
+    background-color: #f8f9fa;
+}
+
+
+
 
 
 @media (max-width: 768px) {
@@ -55,7 +84,7 @@ body{
     background: #ffffff;
     border-radius: 20px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    max-width: 750px;
+    max-width: 1000px;
     margin: auto;
     transition: transform 0.2s;
 }
@@ -93,4 +122,55 @@ h3 {
 
 label {
     font-weight: 500;
+}
+
+.table-striped {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-striped th {
+  background: #ffc43f;
+  color: black;
+  padding: 12px;
+}
+
+.table-striped td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.table-striped tbody tr:hover {
+  background: #fdf2d4;
+}
+
+/* Delete Button */
+.btn-danger {
+  background-color: #dc3545;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: white;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+/* Notyf Alert Box Styles */
+.notyf__toast--success::before {
+  background: rgba(61, 199, 99, 0.7); /* green for success */
+}
+
+.notyf__toast--error::before {
+  background: rgba(255, 99, 71, 0.7); /* red for error */
+}
+
+.notyf__toast {
+  min-width: 400px; /* Adjust width as needed */
+  max-width: 500px; /* Set a max width if you want */
+  width: auto;
+  text-align: center; /* optional: center the text */
 }

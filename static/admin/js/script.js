@@ -140,6 +140,38 @@ async function createUser() {
             `<div class="alert alert-danger">An error occurred. Please try again.</div>`;
     }
 }
+
+function deleteUser(userId) {
+  const notyf = new Notyf({
+    position: {
+      x: 'center',  // 👈 center horizontally
+      y: 'top',     // 👈 top vertically
+    }
+  });
+
+  if (confirm("Are you sure you want to delete this user?")) {
+    fetch(`/admin/delete_user/${userId}`, {
+      method: "DELETE",
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          notyf.success("User deleted successfully");
+          // Refresh the page after 2 seconds
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          notyf.error("Error deleting user: " + data.message);
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        notyf.error("An error occurred while deleting the user.");
+      });
+  }
+}
+
 window.history.pushState(null, "", window.location.href);
 window.onpopstate = function () {
   window.history.pushState(null, "", window.location.href);
