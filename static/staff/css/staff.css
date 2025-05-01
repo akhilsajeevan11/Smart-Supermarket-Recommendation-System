@@ -42,7 +42,7 @@ body {
   .table td {
     padding: 12px;
     border-bottom: 1px solid #ddd;
-  
+    white-space: nowrap; /* Prevent buttons from wrapping */
   }
   
   .table tbody tr:hover {
@@ -59,6 +59,28 @@ body {
   
   .btn-custom:hover {
     background: #e0a800;
+  }
+  
+  .btn-success {
+    background-color: #28a745 !important; /* Green color for Edit button */
+    border: none;
+    font-weight: 600;
+    transition: 0.3s;
+  }
+  
+  .btn-success:hover {
+    background-color: #218838 !important; /* Darker green on hover */
+  }
+  
+  .btn-danger {
+    background-color: #dc3545 !important; /* Red color for Delete button */
+    border: none;
+    font-weight: 600;
+    transition: 0.3s;
+  }
+  
+  .btn-danger:hover {
+    background-color: #c82333 !important; /* Darker red on hover */
   }
   
   /* Image Preview */
@@ -106,4 +128,15 @@ body {
     width: auto;
     text-align: center; /* optional: center the text */
   }
+
+/* Align buttons properly under the "Actions" header */
+.table td:last-child {
+  text-align: center; /* Center align the buttons */
+}
+
+.table td:last-child .d-flex {
+  justify-content: center; /* Center the buttons horizontally */
+  gap: 8px; /* Add consistent spacing between buttons */
+}
+
 

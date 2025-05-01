@@ -225,3 +225,62 @@ function reloadPage(){
         window.location.reload(); 
     },3000)
 }
+
+// Open Edit Mode
+function openEditModal(productId) {
+  console.log("Opening edit mode for product ID:", productId); // Debugging
+  console.log("Products array:", window.products); // Debugging
+
+  // Find the product in the global products array
+  const product = window.products.find(p => p.product_id == productId); // Use == for type coercion
+  if (!product) {
+    alert("Product not found!");
+    return;
+  }
+
+  // Populate the Add / Update Product Section with product data
+  document.getElementById("product-name").value = product.name;
+  document.getElementById("category").value = product.category;
+  document.getElementById("stock-amount").value = product.stock;
+  document.getElementById("price").value = product.price;
+  document.getElementById("editProductId").value = product.product_id; // Store product_id in a hidden field
+
+  // Update the button text and functionality
+  const addUpdateButton = document.querySelector(".btn-custom");
+  addUpdateButton.textContent = "Update Product";
+  addUpdateButton.onclick = () => updateProduct(productId); // Change the button to update mode
+
+  // Scroll to the top of the page to show the form
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Update Product
+function updateProduct(productId) {
+  const name = document.getElementById("product-name").value.trim();
+  const category = document.getElementById("category").value;
+  const stock = parseInt(document.getElementById("stock-amount").value);
+  const price = parseFloat(document.getElementById("price").value);
+
+  if (!name || isNaN(stock) || stock < 0 || isNaN(price) || price <= 0) {
+    alert("Please enter valid product details.");
+    return;
+  }
+
+  fetch(`/update_product/${productId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name, category, stock, price }),
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert("Product updated successfully!");
+        window.location.reload(); // Refresh the page
+      } else {
+        alert("Failed to update product: " + data.message);
+      }
+    })
+    .catch(error => console.error("Error:", error));
+}

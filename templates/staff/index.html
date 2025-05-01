@@ -134,6 +134,7 @@
             >
               Add Product
             </button>
+            <input type="hidden" id="editProductId">
           </div>
         </div>
       </div>
@@ -162,12 +163,16 @@
                     <td>{{ product.name }}</td>
                     <td>{{ product.category }}</td>
                     <td>{{ product.stock }}</td>
-                    <td>{{ product.promotion if product.promotion else "-" }}</td>
-                    <td>${{ product.price }}</td>
+                    <td>₹{{ product.price }}</td>
                     <td>
-                      <button class="btn btn-danger btn-sm" onclick="deleteProduct('{{ product.product_id }}')">
-                        Delete
-                      </button>
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-success btn-sm" onclick="openEditModal('{{ product.product_id }}')">
+                          Edit
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteProduct('{{ product.product_id }}')">
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 {% endfor %}
@@ -208,7 +213,10 @@
                   <td>${product.stock}</td>
                   <td>₹${product.price ? product.price.toFixed(2) : "0.00"}</td>
                   <td>
-                      <button class='btn btn-danger btn-sm' onclick='deleteProduct("${product.product_id}")'>Delete</button>
+                      <div class="d-flex gap-2">
+                        <button class='btn btn-success btn-sm' onclick='openEditModal("${product.product_id}")'>Edit</button>
+                        <button class='btn btn-danger btn-sm' onclick='deleteProduct("${product.product_id}")'>Delete</button>
+                      </div>
                   </td>
               </tr>`
           ).join("");
