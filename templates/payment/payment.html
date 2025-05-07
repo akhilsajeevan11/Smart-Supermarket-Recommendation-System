@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -186,4 +186,157 @@
       });
     </script>
   </body>
+</html> -->
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment</title>
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .payment-card {
+        background-color: #fff;
+        border-radius: 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        padding: 50px;
+        max-width: 450px;
+        width: 100%;
+        text-align: center;
+      }
+      .payment-card h1 {
+        margin-bottom: 20px;
+        font-size: 2.5rem;
+        color: #333;
+      }
+      .payment-card p strong {
+        font-size: 1.8rem;
+        color: #764ba2;
+      }
+      .form-select,
+      .form-control {
+        border-radius: 10px;
+      }
+      .btn-custom {
+        background-color: #667eea;
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 0;
+        font-size: 1.1rem;
+        transition: background-color 0.3s;
+      }
+      .btn-custom:hover {
+        background-color: #556cd6;
+      }
+      .footer-note {
+        margin-top: 30px;
+        font-size: 0.9rem;
+        color: #666;
+      }
+    </style>
+
+    <div class="payment-card">
+      <h1>Payment Summary</h1>
+      <p>
+        You are about to pay:
+        <strong>₹<span id="totalAmount">{{ total_amount }}</span></strong>
+      </p>
+      <div class="form-group text-start mb-4">
+        <label for="paymentMethod" class="form-label">Select Payment Method:</label>
+        <select id="paymentMethod" class="form-select">
+          <option value="Credit Card">Credit Card</option>
+          <option value="Debit Card">Debit Card</option>
+        </select>
+      </div>
+      <button id="payBtn" class="btn btn-custom w-100">Proceed to Pay</button>
+      <div class="footer-note">Your payment is secured and encrypted.</div>
+    </div>
+
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const transactionId = {{ transaction_id | tojson | safe }};
+        const totalAmount = {{ total_amount | tojson | safe }};
+        const payBtn = document.getElementById("payBtn");
+        const paymentMethodSelect = document.getElementById("paymentMethod");
+
+        if (!transactionId || totalAmount <= 0) {
+          alert("Invalid payment details. Please try again.");
+          window.location.href = "/checkout";
+          return;
+        }
+
+        payBtn.addEventListener("click", async function () {
+          payBtn.disabled = true;
+          payBtn.textContent = "Processing...";
+
+          try {
+            const selectedPaymentMethod = paymentMethodSelect.value;
+            
+            const createSessionRes = await fetch("/create_stripe_session", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                transaction_id: transactionId,
+                total_amount: totalAmount,
+                payment_method: selectedPaymentMethod,
+              }),
+            });
+
+            const sessionData = await createSessionRes.json();
+            if (!sessionData.id) {
+              throw new Error("Failed to create Stripe session");
+            }
+
+            const stripe = Stripe("pk_test_51RL6yUJIxGYf1ugQMskE3hBK1BDnluUtfydKQKfxOiDfsvVKk3rwkZzhleSDiaIhvKYqqtWjfEkEL2ELJ1uEpwyZ009rk6dOyu");
+
+            const { error } = await stripe.redirectToCheckout({
+              sessionId: sessionData.id,
+            });
+
+            if (error) {
+              throw error;
+            }
+          } catch (error) {
+            console.error("Payment error:", error);
+            alert("Payment failed: " + error.message);
+            payBtn.disabled = false;
+            payBtn.textContent = "Pay Now";
+          }
+        });
+      });
+    </script>
+  </body>
 </html>
+
+
+
+
+
+
+
+
